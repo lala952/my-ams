@@ -7,6 +7,8 @@ import com.ruoyi.common.core.web.domain.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.List;
+
 /**
  * 资产计划对象 asset_plan
  *
@@ -78,5 +80,5 @@ public class Plan extends BaseEntity {
      * 计划明细列表
      */
     @TableField(exist = false)
-    private java.util.List<PlanDetail> details;
+    private List<PlanDetail> details;
 }

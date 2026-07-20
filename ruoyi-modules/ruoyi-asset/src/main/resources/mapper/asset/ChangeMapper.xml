@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.ChangeMapper">
 
-    <resultMap type="Change" id="ChangeResult">
+    <resultMap type="com.ruoyi.asset.domain.Change" id="ChangeResult">
         <result property="id" column="id"/>
         <result property="changeCode" column="change_code"/>
         <result property="changeType" column="change_type"/>
@@ -21,12 +21,12 @@
     <resultMap type="com.ruoyi.asset.domain.vo.ChangeVO" id="ChangeVOResult" extends="ChangeResult">
         <result property="applicantName" column="applicant_name"/>
         <result property="applicantDeptName" column="applicant_dept_name"/>
-        <collection property="attachments" ofType="ChangeAttachment"
+        <collection property="attachments" ofType="com.ruoyi.asset.domain.ChangeAttachment"
                     select="com.ruoyi.asset.mapper.ChangeAttachmentMapper.selectChangeAttachmentList"
                     column="{masterId=id}"/>
     </resultMap>
 
-    <resultMap type="ChangeDetail" id="ChangeDetailResult">
+    <resultMap type="com.ruoyi.asset.domain.ChangeDetail" id="ChangeDetailResult">
         <result property="id" column="id"/>
         <result property="masterId" column="master_id"/>
         <result property="assetId" column="asset_id"/>
@@ -55,7 +55,7 @@
         where c.del_flag = '0'
     </sql>
 
-    <select id="selectChangeList" parameterType="Change" resultMap="ChangeVOResult">
+    <select id="selectChangeList" parameterType="com.ruoyi.asset.domain.Change" resultMap="ChangeVOResult">
         <include refid="selectChangeVo"/>
         <if test="changeCode != null and changeCode != ''">
             AND c.change_code = #{changeCode}

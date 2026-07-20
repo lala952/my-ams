@@ -9,7 +9,7 @@ spring:
     name: ruoyi-asset
   profiles:
     # 环境配置(dev pro)
-    active: pro
+    active: prod
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
@@ -17,10 +17,10 @@ spring:
     nacos:
       discovery:
         # 服务注册地址
-        server-addr: 192.168.186.128:8848
+        server-addr:  ruoyi-nacos:8848
       config:
         # 配置中心地址
-        server-addr: 192.168.186.128:8848
+        server-addr:  ruoyi-nacos:8848
         # 配置文件格式
         file-extension: yml
         # 共享配置

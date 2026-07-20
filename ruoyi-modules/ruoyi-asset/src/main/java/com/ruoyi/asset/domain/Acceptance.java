@@ -63,7 +63,7 @@ public class Acceptance extends BaseEntity {
     /**
      * 状态
      */
-    private String status;
+    private String businessStatus;
 
     /**
      * 验收日期

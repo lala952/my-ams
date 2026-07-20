@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.CapitalizeMapper">
 
-    <resultMap type="Capitalize" id="CapitalizeResult">
+    <resultMap type="com.ruoyi.asset.domain.Capitalize" id="CapitalizeResult">
         <result property="id" column="id"/>
         <result property="capitalizeCode" column="capitalize_code"/>
         <result property="acceptanceId" column="acceptance_id"/>
@@ -12,7 +12,7 @@
         <result property="capitalizeDate" column="capitalize_date"/>
         <result property="originalValue" column="original_value"/>
         <result property="depreciationStartDate" column="depreciation_start_date"/>
-        <result property="businessStatus " column="business_status"/>
+        <result property="businessStatus" column="business_status"/>
         <result property="remark" column="remark"/>
         <result property="createBy" column="create_by"/>
         <result property="createTime" column="create_time"/>
@@ -39,7 +39,7 @@
         from asset_capitalize
     </sql>
 
-    <select id="selectCapitalizeList" parameterType="Capitalize" resultMap="CapitalizeResult">
+    <select id="selectCapitalizeList" parameterType="com.ruoyi.asset.domain.Capitalize" resultMap="CapitalizeResult">
         <include refid="selectCapitalizeVo"/>
         <where>
             <if test="capitalizeCode != null  and capitalizeCode != ''">and capitalize_code = #{capitalizeCode}</if>

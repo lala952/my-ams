@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.SplitMapper">
 
-    <resultMap type="Split" id="SplitResult">
+    <resultMap type="com.ruoyi.asset.domain.Split" id="SplitResult">
             <result property="id" column="id"/>
             <result property="splitCode" column="split_code"/>
             <result property="sourceAssetId" column="source_asset_id"/>
@@ -28,7 +28,7 @@
         from asset_split
     </sql>
 
-    <select id="selectSplitList" parameterType="Split" resultMap="SplitResult">
+    <select id="selectSplitList" parameterType="com.ruoyi.asset.domain.Split" resultMap="SplitResult">
         <include refid="selectSplitVo"/>
         <where>
                         <if test="splitCode != null  and splitCode != ''">

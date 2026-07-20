@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.HandoverMapper">
-    <resultMap type="Handover" id="HandoverResult">
+    <resultMap type="com.ruoyi.asset.domain.Handover" id="HandoverResult">
         <id property="id" column="id"/>
         <result property="handoverCode" column="handover_code"/>
         <result property="assetId" column="asset_id"/>
-        <result property="assetName" column="asset_name"/>
-        <result property="assetCode" column="asset_code"/>
         <result property="fromPersonId" column="from_person_id"/>
         <result property="toPersonId" column="to_person_id"/>
         <result property="handoverDate" column="handover_date"/>
         <result property="businessStatus" column="business_status"/>
         <result property="procInstId" column="proc_inst_id"/>
-        <result property="procDefId" column="proc_def_id"/>
         <result property="remark" column="remark"/>
         <result property="createBy" column="create_by"/>
         <result property="createTime" column="create_time"/>
@@ -40,7 +37,7 @@
                del_flag
         from asset_handover
     </sql>
-    <select id="selectHandoverList" parameterType="Handover" resultMap="HandoverResult">
+    <select id="selectHandoverList" parameterType="com.ruoyi.asset.domain.Handover" resultMap="HandoverResult">
         <include refid="selectHandoverVo"/>
         <where>
             <if test="handoverCode != null and handoverCode != ''">AND handover_code like concat('%', #{handoverCode},

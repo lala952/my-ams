@@ -64,7 +64,7 @@ public class Transfer extends BaseEntity {
      * 业务状态：draft-待提交, pending-办理中, rejected-已退回, completed-已完成
      */
     @Excel(name = "业务状态", defaultValue = "无")
-    private String businessStatus;
+    private String transferStatus;
 
     /**
      * 流程实例ID

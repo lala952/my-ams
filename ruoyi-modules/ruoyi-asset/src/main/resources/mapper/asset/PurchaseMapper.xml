@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.PurchaseMapper">
 
-    <resultMap type="Purchase" id="PurchaseResult">
+    <resultMap type="com.ruoyi.asset.domain.Purchase" id="PurchaseResult">
         <result property="id" column="id"/>
         <result property="purchaseCode" column="purchase_code"/>
         <result property="purchaseName" column="purchase_name"/>
@@ -55,7 +55,7 @@
         from asset_purchase
     </sql>
 
-    <select id="selectPurchaseList" parameterType="Purchase" resultMap="PurchaseResult">
+    <select id="selectPurchaseList" parameterType="com.ruoyi.asset.domain.Purchase" resultMap="PurchaseResult">
         <include refid="selectPurchaseVo"/>
         <where>
             <if test="purchaseCode != null  and purchaseCode != ''">and purchase_code = #{purchaseCode}</if>

@@ -27,7 +27,7 @@
         from asset_change_attachment
     </sql>
 
-    <select id="selectChangeAttachmentList" parameterType="ChangeAttachment" resultMap="ChangeAttachmentResult">
+    <select id="selectChangeAttachmentList" parameterType="com.ruoyi.asset.domain.ChangeAttachment" resultMap="ChangeAttachmentResult">
         <include refid="selectChangeAttachmentVo"/>
         <where>
             del_flag = '0'

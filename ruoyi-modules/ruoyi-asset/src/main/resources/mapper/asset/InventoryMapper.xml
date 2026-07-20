@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.InventoryMapper">
 
-    <resultMap type="Inventory" id="InventoryResult">
+    <resultMap type="com.ruoyi.asset.domain.Inventory" id="InventoryResult">
         <result property="id" column="id"/>
         <result property="inventoryCode" column="inventory_code"/>
         <result property="inventoryName" column="inventory_name"/>
@@ -25,8 +25,8 @@
         <result property="delFlag" column="del_flag"/>
     </resultMap>
 
-    <resultMap id="InventoryInventoryDetailResult" type="Inventory" extends="InventoryResult">
-        <collection property="inventoryDetailList" ofType="InventoryDetail" column="id"
+    <resultMap id="InventoryInventoryDetailResult" type="com.ruoyi.asset.domain.Inventory" extends="InventoryResult">
+        <collection property="inventoryDetailList" ofType="com.ruoyi.asset.domain.InventoryDetail" column="id"
                     select="com.ruoyi.asset.mapper.InventoryDetailMapper.selectInventoryDetailList"/>
     </resultMap>
 
@@ -39,7 +39,7 @@
         from asset_inventory
     </sql>
 
-    <select id="selectInventoryList" parameterType="Inventory" resultMap="InventoryResult">
+    <select id="selectInventoryList" parameterType="com.ruoyi.asset.domain.Inventory" resultMap="InventoryResult">
         <include refid="selectInventoryVo"/>
         <where>
             <if test="inventoryCode != null and inventoryCode != ''">and inventory_code = #{inventoryCode}</if>

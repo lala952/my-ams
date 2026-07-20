@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.InventoryDetailMapper">
 
-    <resultMap type="InventoryDetail" id="InventoryDetailResult">
+    <resultMap type="com.ruoyi.asset.domain.InventoryDetail" id="InventoryDetailResult">
         <result property="id" column="id"/>
         <result property="masterId" column="master_id"/>
         <result property="assetId" column="asset_id"/>
@@ -12,8 +12,6 @@
         <result property="actualQuantity" column="actual_quantity"/>
         <result property="difference" column="difference"/>
         <result property="inventoryResult" column="inventory_result"/>
-        <result property="inventoryResultDesc" column="inventory_result_desc"/>
-        <result property="inventoryPerson" column="inventory_person"/>
         <result property="inventoryTime" column="inventory_time"/>
         <result property="delFlag" column="del_flag"/>
     </resultMap>
@@ -31,7 +29,7 @@
         from asset_inventory_detail
     </sql>
 
-    <select id="selectInventoryDetailList" parameterType="InventoryDetail" resultMap="InventoryDetailResult">
+    <select id="selectInventoryDetailList" parameterType="com.ruoyi.asset.domain.InventoryDetail" resultMap="InventoryDetailResult">
         <include refid="selectInventoryDetailVo"/>
         <where>
             <if test="masterId != null ">and master_id = #{masterId}</if>

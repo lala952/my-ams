@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.TransferMapper">
-    <resultMap type="Transfer" id="TransferResult">
+    <resultMap type="com.ruoyi.asset.domain.Transfer" id="TransferResult">
         <id property="id" column="id"/>
         <result property="transferCode" column="transfer_code"/>
         <result property="assetId" column="asset_id"/>
-        <result property="assetName" column="asset_name"/>
-        <result property="assetCode" column="asset_code"/>
-        <result property="outDeptId" column="out_dept_id"/>
-        <result property="inDeptId" column="in_dept_id"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="fromDeptId" column="from_dept_id"/>
+        <result property="toDeptId" column="to_dept_id"/>
         <result property="transferDate" column="transfer_date"/>
-        <result property="businessStatus" column="business_status"/>
+        <result property="transferStatus" column="transfer_status"/>
         <result property="procInstId" column="proc_inst_id"/>
         <result property="procDefId" column="proc_def_id"/>
         <result property="remark" column="remark"/>
@@ -24,10 +23,8 @@
         select id,
                transfer_code,
                asset_id,
-               asset_name,
-               asset_code,
-               out_dept_id,
-               in_dept_id,
+               from_dept_id,
+               to_dept_id,
                transfer_date,
                business_status,
                proc_inst_id,
@@ -40,7 +37,7 @@
                del_flag
         from asset_transfer
     </sql>
-    <select id="selectTransferList" parameterType="Transfer" resultMap="TransferResult">
+    <select id="selectTransferList" parameterType="com.ruoyi.asset.domain.Transfer" resultMap="TransferResult">
         <include refid="selectTransferVo"/>
         <where>
             <if test="transferCode != null and transferCode != ''">AND transfer_code like concat('%', #{transferCode},
@@ -51,7 +48,7 @@
         order by create_time desc
     </select>
     <!-- 统计各审批状态数量 - 从工作流引擎实时获取 -->
-    <select id="countByStatus" resultType="java.util.HashMap">
+    <select id="countByStatus" resultType="java.util.Map">
         SELECT SUM(CASE WHEN tr.proc_inst_id IS NULL OR tr.proc_inst_id = '' THEN 1 ELSE 0 END)    AS draft,
                SUM(CASE WHEN tr.proc_inst_id IS NOT NULL AND t.ID_ IS NOT NULL THEN 1 ELSE 0 END) AS pending,
                SUM(CASE

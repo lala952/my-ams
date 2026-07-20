@@ -21,7 +21,7 @@ public class TransferServiceImpl extends ServiceImpl<TransferMapper, Transfer> i
     public List<Transfer> selectTransferList(Transfer transfer) {
         LambdaQueryWrapper<Transfer> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(transfer.getTransferCode() != null, Transfer::getTransferCode, transfer.getTransferCode())
-                .eq(transfer.getBusinessStatus() != null, Transfer::getBusinessStatus, transfer.getBusinessStatus())
+                .eq(transfer.getTransferStatus() != null, Transfer::getTransferStatus, transfer.getTransferStatus())
                 .orderByDesc(Transfer::getCreateTime);
         return transferMapper.selectList(wrapper);
     }
@@ -32,11 +32,13 @@ public class TransferServiceImpl extends ServiceImpl<TransferMapper, Transfer> i
         List<Long> ids = (List<Long>) params.get("ids");
         String remark = (String) params.get("remark");
         String result = (String) params.get("result");
-        if (ids == null || ids.isEmpty()) return false;
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
         for (Long id : ids) {
             Transfer t = this.getById(id);
-            if (t != null && BusinessStatusConstants.PENDING.equals(t.getBusinessStatus())) {
-                t.setBusinessStatus("approved".equals(result) ? BusinessStatusConstants.COMPLETED : BusinessStatusConstants.REJECTED);
+            if (t != null && BusinessStatusConstants.PENDING.equals(t.getTransferStatus())) {
+                t.setTransferStatus("approved".equals(result) ? BusinessStatusConstants.COMPLETED : BusinessStatusConstants.REJECTED);
                 t.setRemark(remark);
                 this.updateById(t);
             }

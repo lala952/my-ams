@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.AcceptanceMapper">
 
-    <resultMap type="Acceptance" id="AcceptanceResult">
+    <resultMap type="com.ruoyi.asset.domain.Acceptance" id="AcceptanceResult">
         <result property="id" column="id"/>
         <result property="acceptanceCode" column="acceptance_code"/>
         <result property="purchaseId" column="purchase_id"/>
@@ -45,7 +45,7 @@
         from asset_acceptance
     </sql>
 
-    <select id="selectAcceptanceList" parameterType="Acceptance" resultMap="AcceptanceResult">
+    <select id="selectAcceptanceList" parameterType="com.ruoyi.asset.domain.Acceptance" resultMap="AcceptanceResult">
         <include refid="selectAcceptanceVo"/>
         <where>
 

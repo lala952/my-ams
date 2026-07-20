@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.ReceiveMapper">
 
-    <resultMap type="Receive" id="ReceiveResult">
+    <resultMap type="com.ruoyi.asset.domain.Receive" id="ReceiveResult">
         <id property="id" column="id"/>
         <result property="receiveCode" column="receive_code"/>
         <result property="assetId" column="asset_id"/>
@@ -44,7 +44,7 @@
         from asset_receive
     </sql>
 
-    <select id="selectReceiveList" parameterType="Receive" resultMap="ReceiveResult">
+    <select id="selectReceiveList" parameterType="com.ruoyi.asset.domain.Receive" resultMap="ReceiveResult">
         <include refid="selectReceiveVo"/>
         <where>
             <if test="receiveCode != null and receiveCode != ''">

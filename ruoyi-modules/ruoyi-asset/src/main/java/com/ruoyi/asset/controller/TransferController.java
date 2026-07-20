@@ -52,7 +52,7 @@ public class TransferController extends BaseController {
 
         // 转换字典值为标签
         list.forEach(item -> {
-            item.setBusinessStatus(DictLabelUtils.getDictLabel("bill_status", item.getBusinessStatus()));
+            item.setTransferStatus(DictLabelUtils.getDictLabel("bill_status", item.getTransferStatus()));
         });
 
         ExcelUtil<Transfer> util = new ExcelUtil<Transfer>(Transfer.class);

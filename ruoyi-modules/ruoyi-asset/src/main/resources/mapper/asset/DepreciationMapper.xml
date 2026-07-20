@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.DepreciationMapper">
 
-    <resultMap type="Depreciation" id="DepreciationResult">
+    <resultMap type="com.ruoyi.asset.domain.Depreciation" id="DepreciationResult">
         <result property="id" column="id"/>
         <result property="assetId" column="asset_id"/>
         <result property="depreciationPeriod" column="depreciation_period"/>
@@ -35,7 +35,7 @@
         from asset_depreciation
     </sql>
 
-    <select id="selectDepreciationList" parameterType="Depreciation" resultMap="DepreciationResult">
+    <select id="selectDepreciationList" parameterType="com.ruoyi.asset.domain.Depreciation" resultMap="DepreciationResult">
         <include refid="selectDepreciationVo"/>
         <where>
             <if test="assetId != null ">and asset_id = #{assetId}</if>

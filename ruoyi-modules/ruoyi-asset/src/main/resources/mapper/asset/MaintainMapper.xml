@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.asset.mapper.MaintainMapper">
-    <resultMap type="Maintain" id="MaintainResult">
+    <resultMap type="com.ruoyi.asset.domain.Maintain" id="MaintainResult">
         <id property="id" column="id"/>
         <result property="maintenanceCode" column="maintenance_code"/>
         <result property="assetId" column="asset_id"/>
-        <result property="assetName" column="asset_name"/>
-        <result property="assetCode" column="asset_code"/>
         <result property="maintenanceType" column="maintenance_type"/>
         <result property="maintenanceDate" column="maintenance_date"/>
         <result property="businessStatus" column="business_status"/>
@@ -38,7 +36,7 @@
                del_flag
         from asset_maintain
     </sql>
-    <select id="selectMaintainList" parameterType="Maintain" resultMap="MaintainResult">
+    <select id="selectMaintainList" parameterType="com.ruoyi.asset.domain.Maintain" resultMap="MaintainResult">
         <include refid="selectMaintainVo"/>
         <where>
             <if test="maintenanceCode != null and maintenanceCode != ''">AND maintenance_code like concat('%',
