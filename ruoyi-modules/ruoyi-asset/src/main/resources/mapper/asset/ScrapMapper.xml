@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.ScrapMapper">
+
+    <resultMap type="Scrap" id="ScrapResult">
+        <result property="id" column="id"/>
+        <result property="scrapCode" column="scrap_code"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="scrapDate" column="scrap_date"/>
+        <result property="scrapReason" column="scrap_reason"/>
+        <result property="scrapType" column="scrap_type"/>
+        <result property="businessStatus" column="business_status"/>
+        <result property="approverId" column="approver_id"/>
+        <result property="approveTime" column="approve_time"/>
+        <result property="remark" column="remark"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectScrapVo">
+        select id,
+               scrap_code,
+               asset_id,
+               scrap_date,
+               scrap_reason,
+               scrap_type,
+               business_status,
+               approver_id,
+               approve_time,
+               remark,
+               del_flag
+        from asset_scrap
+    </sql>
+
+    <select id="selectScrapList" parameterType="Scrap" resultMap="ScrapResult">
+        <include refid="selectScrapVo"/>
+        <where>
+            <if test="scrapCode != null  and scrapCode != ''">and scrap_code = #{scrapCode}</if>
+            <if test="assetId != null ">and asset_id = #{assetId}</if>
+            <if test="scrapDate != null ">and scrap_date = #{scrapDate}</if>
+            <if test="scrapReason != null  and scrapReason != ''">and scrap_reason = #{scrapReason}</if>
+            <if test="scrapType != null  and scrapType != ''">and scrap_type = #{scrapType}</if>
+            <if test="businessStatus != null  and businessStatus != ''">and businessStatus = #{businessStatus}</if>
+            <if test="approverId != null ">and approver_id = #{approverId}</if>
+            <if test="approveTime != null ">and approve_time = #{approveTime}</if>
+            AND del_flag = '0'
+        </where>
+        order by id desc
+    </select>
+
+    <select id="selectScrapById" parameterType="Long" resultMap="ScrapResult">
+        <include refid="selectScrapVo"/>
+        where id = #{id} AND del_flag = '0'
+    </select>
+
+</mapper>

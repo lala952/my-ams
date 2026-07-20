@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.DepreciationMapper">
+
+    <resultMap type="Depreciation" id="DepreciationResult">
+        <result property="id" column="id"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="depreciationPeriod" column="depreciation_period"/>
+        <result property="depreciationDate" column="depreciation_date"/>
+        <result property="periodYear" column="period_year"/>
+        <result property="periodMonth" column="period_month"/>
+        <result property="depreciationAmount" column="depreciation_amount"/>
+        <result property="accumulatedDepreciation" column="accumulated_depreciation"/>
+        <result property="netValue" column="net_value"/>
+        <result property="businessStatus" column="business_status"/>
+        <result property="remark" column="remark"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectDepreciationVo">
+        select id,
+               asset_id,
+               depreciation_period,
+               depreciation_date,
+               period_year,
+               period_month,
+               depreciation_amount,
+               accumulated_depreciation,
+               net_value,
+               business_status,
+               remark,
+               del_flag
+        from asset_depreciation
+    </sql>
+
+    <select id="selectDepreciationList" parameterType="Depreciation" resultMap="DepreciationResult">
+        <include refid="selectDepreciationVo"/>
+        <where>
+            <if test="assetId != null ">and asset_id = #{assetId}</if>
+            <if test="depreciationPeriod != null  and depreciationPeriod != ''">and depreciation_period =
+                #{depreciationPeriod}
+            </if>
+            <if test="depreciationDate != null ">and depreciation_date = #{depreciationDate}</if>
+            <if test="periodYear != null ">and period_year = #{periodYear}</if>
+            <if test="periodMonth != null ">and period_month = #{periodMonth}</if>
+            <if test="depreciationAmount != null ">and depreciation_amount = #{depreciationAmount}</if>
+            <if test="accumulatedDepreciation != null ">and accumulated_depreciation = #{accumulatedDepreciation}</if>
+            <if test="netValue != null ">and net_value = #{netValue}</if>
+            <if test="businessStatus != null ">and business_status = #{businessStatus}</if>
+            AND del_flag = '0'
+        </where>
+    </select>
+</mapper>

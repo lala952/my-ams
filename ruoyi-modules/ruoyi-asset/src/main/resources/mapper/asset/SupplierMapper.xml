@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.SupplierMapper">
+
+    <resultMap type="com.ruoyi.asset.domain.Supplier" id="SupplierResult">
+        <result property="id" column="id"/>
+        <result property="supplierCode" column="supplier_code"/>
+        <result property="supplierName" column="supplier_name"/>
+        <result property="shortName" column="short_name"/>
+        <result property="supplierType" column="supplier_type"/>
+        <result property="contactPerson" column="contact_person"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="contactEmail" column="contact_email"/>
+        <result property="address" column="address"/>
+        <result property="cooperationStatus" column="cooperation_status"/>
+        <result property="creditRating" column="credit_rating"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectSupplierVo">
+        select id,
+               supplier_code,
+               supplier_name,
+               short_name,
+               supplier_type,
+               contact_person,
+               contact_phone,
+               contact_email,
+               address,
+               cooperation_status,
+               credit_rating,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_supplier
+    </sql>
+
+    <select id="selectSupplierList" parameterType="com.ruoyi.asset.domain.Supplier" resultMap="SupplierResult">
+        <include refid="selectSupplierVo"/>
+        <where>
+            <if test="supplierCode != null  and supplierCode != ''">and supplier_code = #{supplierCode}</if>
+            <if test="supplierName != null  and supplierName != ''">and supplier_name like concat('%', #{supplierName},
+                '%')
+            </if>
+            <if test="shortName != null  and shortName != ''">and short_name like concat('%', #{shortName}, '%')</if>
+            <if test="supplierType != null  and supplierType != ''">and supplier_type = #{supplierType}</if>
+            AND del_flag = '0'
+        </where>
+    </select>
+</mapper>

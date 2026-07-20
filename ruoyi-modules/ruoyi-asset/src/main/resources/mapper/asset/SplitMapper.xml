@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.SplitMapper">
+
+    <resultMap type="Split" id="SplitResult">
+            <result property="id" column="id"/>
+            <result property="splitCode" column="split_code"/>
+            <result property="sourceAssetId" column="source_asset_id"/>
+            <result property="splitReason" column="split_reason"/>
+            <result property="splitDate" column="split_date"/>
+            <result property="splitQuantity" column="split_quantity"/>
+            <result property="businessStatus" column="business_status"/>
+            <result property="approverId" column="approver_id"/>
+            <result property="approveTime" column="approve_time"/>
+            <result property="procInstId" column="proc_inst_id"/>
+            <result property="remark" column="remark"/>
+            <result property="createBy" column="create_by"/>
+            <result property="createTime" column="create_time"/>
+            <result property="updateBy" column="update_by"/>
+            <result property="updateTime" column="update_time"/>
+            <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectSplitVo">
+        select id, split_code, source_asset_id, split_reason, split_date, split_quantity, business_status, approver_id, approve_time, proc_inst_id, remark, create_by, create_time, update_by, update_time, del_flag
+        from asset_split
+    </sql>
+
+    <select id="selectSplitList" parameterType="Split" resultMap="SplitResult">
+        <include refid="selectSplitVo"/>
+        <where>
+                        <if test="splitCode != null  and splitCode != ''">
+                            and split_code = #{splitCode}
+                        </if>
+                        <if test="sourceAssetId != null ">
+                            and source_asset_id = #{sourceAssetId}
+                        </if>
+                        <if test="splitDate != null ">
+                            and split_date = #{splitDate}
+                        </if>
+                        <if test="businessStatus != null  and businessStatus != ''">
+                            and business_status = #{businessStatus}
+                        </if>
+                        <if test="approverId != null ">
+                            and approver_id = #{approverId}
+                        </if>
+                        <if test="approveTime != null ">
+                            and approve_time = #{approveTime}
+                        </if>
+        </where>
+        order by create_time desc
+    </select>
+
+</mapper>

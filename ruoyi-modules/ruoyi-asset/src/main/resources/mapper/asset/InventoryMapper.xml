@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.InventoryMapper">
+
+    <resultMap type="Inventory" id="InventoryResult">
+        <result property="id" column="id"/>
+        <result property="inventoryCode" column="inventory_code"/>
+        <result property="inventoryName" column="inventory_name"/>
+        <result property="inventoryType" column="inventory_type"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="inventoryPersonId" column="inventory_person_id"/>
+        <result property="inventoryDate" column="inventory_date"/>
+        <result property="plannedStartDate" column="planned_start_date"/>
+        <result property="plannedEndDate" column="planned_end_date"/>
+        <result property="actualStartDate" column="actual_start_date"/>
+        <result property="actualEndDate" column="actual_end_date"/>
+        <result property="businessStatus" column="business_status"/>
+        <result property="totalAssets" column="total_assets"/>
+        <result property="inventoriedCount" column="inventoried_count"/>
+        <result property="surplusCount" column="surplus_count"/>
+        <result property="shortageCount" column="shortage_count"/>
+        <result property="completionRate" column="completion_rate"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <resultMap id="InventoryInventoryDetailResult" type="Inventory" extends="InventoryResult">
+        <collection property="inventoryDetailList" ofType="InventoryDetail" column="id"
+                    select="com.ruoyi.asset.mapper.InventoryDetailMapper.selectInventoryDetailList"/>
+    </resultMap>
+
+    <sql id="selectInventoryVo">
+        select id, inventory_code, inventory_name, inventory_type, dept_id,
+               inventory_person_id, inventory_date, planned_start_date, planned_end_date,
+               actual_start_date, actual_end_date, business_status,
+               total_assets, inventoried_count, surplus_count, shortage_count, completion_rate,
+               del_flag
+        from asset_inventory
+    </sql>
+
+    <select id="selectInventoryList" parameterType="Inventory" resultMap="InventoryResult">
+        <include refid="selectInventoryVo"/>
+        <where>
+            <if test="inventoryCode != null and inventoryCode != ''">and inventory_code = #{inventoryCode}</if>
+            <if test="inventoryName != null and inventoryName != ''">and inventory_name like concat('%', #{inventoryName}, '%')</if>
+            <if test="inventoryType != null and inventoryType != ''">and inventory_type = #{inventoryType}</if>
+            <if test="deptId != null">and dept_id = #{deptId}</if>
+            <if test="inventoryPersonId != null">and inventory_person_id = #{inventoryPersonId}</if>
+            <if test="businessStatus != null and businessStatus != ''">and business_status = #{businessStatus}</if>
+            AND del_flag = '0'
+        </where>
+    </select>
+
+    <select id="selectInventoryById" parameterType="Long" resultMap="InventoryInventoryDetailResult">
+        select id, inventory_code, inventory_name, inventory_type, dept_id,
+               inventory_person_id, inventory_date, planned_start_date, planned_end_date,
+               actual_start_date, actual_end_date, business_status,
+               total_assets, inventoried_count, surplus_count, shortage_count, completion_rate,
+               del_flag
+        from asset_inventory
+        where id = #{id} AND del_flag = '0'
+    </select>
+
+</mapper>

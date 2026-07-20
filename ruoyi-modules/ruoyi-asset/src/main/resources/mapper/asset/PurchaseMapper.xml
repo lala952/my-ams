@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.PurchaseMapper">
+
+    <resultMap type="Purchase" id="PurchaseResult">
+        <result property="id" column="id"/>
+        <result property="purchaseCode" column="purchase_code"/>
+        <result property="purchaseName" column="purchase_name"/>
+        <result property="assetType" column="asset_type"/>
+        <result property="model" column="model"/>
+        <result property="brand" column="brand"/>
+        <result property="spec" column="spec"/>
+        <result property="quantity" column="quantity"/>
+        <result property="estimatedPrice" column="estimated_price"/>
+        <result property="purpose" column="purpose"/>
+        <result property="reason" column="reason"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="applicantId" column="applicant_id"/>
+        <result property="applyDate" column="apply_date"/>
+        <result property="expectedDate" column="expected_date"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectPurchaseVo">
+        select id,
+               purchase_code,
+               purchase_name,
+               asset_type,
+               model,
+               brand,
+               spec,
+               quantity,
+               estimated_price,
+               purpose,
+               reason,
+               dept_id,
+               applicant_id,
+               apply_date,
+               expected_date,
+               status,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_purchase
+    </sql>
+
+    <select id="selectPurchaseList" parameterType="Purchase" resultMap="PurchaseResult">
+        <include refid="selectPurchaseVo"/>
+        <where>
+            <if test="purchaseCode != null  and purchaseCode != ''">and purchase_code = #{purchaseCode}</if>
+            <if test="purchaseName != null  and purchaseName != ''">and purchase_name like concat('%', #{purchaseName},
+                '%')
+            </if>
+            <if test="assetType != null  and assetType != ''">and asset_type = #{assetType}</if>
+            AND del_flag = '0'
+        </where>
+    </select>
+</mapper>

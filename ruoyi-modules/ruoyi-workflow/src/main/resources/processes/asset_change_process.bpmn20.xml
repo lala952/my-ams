@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:activiti="http://activiti.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" typeLanguage="http://www.w3.org/2001/XMLSchema" expressionLanguage="http://www.w3.org/1999/XPath" targetNamespace="http://www.activiti.org/processdef">
+  <process id="asset_change_process" name="资产变动审批流程" isExecutable="true">
+    <!--  流程变量说明  -->
+    <!--
+            流程变量：
+            - changeId: 变动单ID（业务主键）
+            - applicantId: 申请人ID
+            - approved: 审批结果（true-通过，false-驳回）
+            - comment: 审批意见
+            - 注意：审批人不再通过变量传入，而是通过 candidateGroups 指定角色 'asset_manager'
+        -->
+    <!-- 开始节点 -->
+    <startEvent id="start" name="开始"/>
+    <!-- 资产经办人提交节点 -->
+    <userTask id="submit" name="资产经办人提交" activiti:candidateGroups="asset_handler">
+      <documentation>资产经办人提交</documentation>
+    </userTask>
+    <!-- 资产管理员审批节点 -->
+    <userTask id="managerApprove" name="资产管理员审批" activiti:candidateGroups="asset_manager">
+      <documentation>资产管理员审批</documentation>
+    </userTask>
+    <!-- 结束节点 -->
+    <endEvent id="end" name="结束"/>
+    <!--  连线定义  -->
+    <!-- 开始 -> 经办人提交 -->
+    <sequenceFlow id="flow_start_to_submit" sourceRef="start" targetRef="submit"/>
+    <!-- 经办人提交 -> 管理员审批 -->
+    <sequenceFlow id="flow_submit_to_approve" sourceRef="submit" targetRef="managerApprove"/>
+    <!-- 管理员审批通过 -> 结束 -->
+    <sequenceFlow id="flow_approve" sourceRef="managerApprove" targetRef="end">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approved == true}]]></conditionExpression>
+    </sequenceFlow>
+    <!-- 管理员审批不通过 ->驳回到资产经办人提交节点-->
+    <sequenceFlow id="flow_reject" sourceRef="managerApprove" targetRef="submit">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${approved == false}]]></conditionExpression>
+    </sequenceFlow>
+  </process>
+  <!--  图形布局定义  -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_asset_change_process">
+    <bpmndi:BPMNPlane id="BPMNPlane_asset_change_process" bpmnElement="asset_change_process">
+      <!-- 开始节点 -->
+      <bpmndi:BPMNShape id="BPMNShape_start" bpmnElement="start">
+        <omgdc:Bounds x="100" y="200" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="106" y="243" width="24" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <!-- 资产经办人提交 -->
+      <bpmndi:BPMNShape id="BPMNShape_submit" bpmnElement="submit">
+        <omgdc:Bounds x="205" y="178" width="100" height="80"/>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="210" y="208" width="80" height="40"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <!-- 资产管理员审批 -->
+      <bpmndi:BPMNShape id="BPMNShape_managerApprove" bpmnElement="managerApprove">
+        <omgdc:Bounds x="400" y="178" width="100" height="80"/>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="410" y="208" width="80" height="40"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <!-- 结束节点 -->
+      <bpmndi:BPMNShape id="BPMNShape_end" bpmnElement="end">
+        <omgdc:Bounds x="600" y="200" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="606" y="243" width="24" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <!-- 连线：开始 -> 经办人提交 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_flow_start_to_submit" bpmnElement="flow_start_to_submit">
+        <omgdi:waypoint x="136" y="218"/>
+        <omgdi:waypoint x="205" y="218"/>
+      </bpmndi:BPMNEdge>
+      <!-- 连线：经办人提交 -> 管理员审批 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_flow_submit_to_approve" bpmnElement="flow_submit_to_approve">
+        <omgdi:waypoint x="305" y="218"/>
+        <omgdi:waypoint x="400" y="218"/>
+      </bpmndi:BPMNEdge>
+      <!-- 连线：管理员通过 -> 结束 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_flow_approve" bpmnElement="flow_approve">
+        <omgdi:waypoint x="500" y="218"/>
+        <omgdi:waypoint x="600" y="218"/>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="535" y="200" width="30" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <!-- 连线：管理员不通过 -> 结束（绕下方） -->
+      <bpmndi:BPMNEdge id="BPMNEdge_flow_reject" bpmnElement="flow_reject">
+        <omgdi:waypoint x="450" y="258"/>
+        <omgdi:waypoint x="450" y="310"/>
+        <omgdi:waypoint x="254.99997" y="309.99997"/>
+        <omgdi:waypoint x="254.99997" y="258.00003"/>
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="520" y="295" width="30" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

@@ -1,0 +1,28 @@
+# Tomcat
+server:
+  port: 9206
+
+# Spring
+spring:
+  application:
+    # 应用名称
+    name: ruoyi-workflow
+  profiles:
+    # 环境配置
+    active: dev
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+  cloud:
+    nacos:
+      discovery:
+        # 服务注册地址
+        server-addr: 192.168.186.128:8848
+      config:
+        # 配置中心地址
+        server-addr: 192.168.186.128:8848
+        # 配置文件格式
+        file-extension: yml
+        # 共享配置
+        shared-configs:
+          - application-${spring.profiles.active}.${spring.cloud.nacos.config.file-extension}

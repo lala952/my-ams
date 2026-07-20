@@ -1,0 +1,132 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.AssetsMapper">
+
+    <resultMap type="com.ruoyi.asset.domain.Assets" id="AssetsResult">
+        <result property="id" column="id"/>
+        <result property="assetCode" column="asset_code"/>
+        <result property="assetName" column="asset_name"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="assetType" column="asset_type"/>
+        <result property="assetSource" column="asset_source"/>
+        <result property="model" column="model"/>
+        <result property="brand" column="brand"/>
+        <result property="serialNumber" column="serial_number"/>
+        <result property="quantity" column="quantity"/>
+        <result property="unit" column="unit"/>
+        <result property="originalValue" column="original_value"/>
+        <result property="salvageValue" column="salvage_value"/>
+        <result property="depreciationMethod" column="depreciation_method"/>
+        <result property="depreciationRate" column="depreciation_rate"/>
+        <result property="accumulatedDepreciation" column="accumulated_depreciation"/>
+        <result property="netValue" column="net_value"/>
+        <result property="depreciationStartDate" column="depreciation_start_date"/>
+        <result property="supplierId" column="supplier_id"/>
+        <result property="purchaseDate" column="purchase_date"/>
+        <result property="purchasePrice" column="purchase_price"/>
+        <result property="warrantyExpireDate" column="warranty_expire_date"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="location" column="location"/>
+        <result property="longitude" column="longitude"/>
+        <result property="latitude" column="latitude"/>
+        <result property="assetStatus" column="asset_status"/>
+        <result property="barcode" column="barcode"/>
+        <result property="rfidTag" column="rfid_tag"/>
+        <result property="manufactureDate" column="manufacture_date"/>
+        <result property="startUseDate" column="start_use_date"/>
+        <result property="scrapDate" column="scrap_date"/>
+        <result property="mainImage" column="main_image"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectAssetsVo">
+        select id,
+               asset_code,
+               asset_name,
+               category_id,
+               asset_type,
+               asset_source,
+               model,
+               brand,
+               serial_number,
+               quantity,
+               unit,
+               original_value,
+               salvage_value,
+               depreciation_method,
+               depreciation_rate,
+               accumulated_depreciation,
+               net_value,
+               depreciation_start_date,
+               supplier_id,
+               purchase_date,
+               purchase_price,
+               warranty_expire_date,
+               dept_id,
+               user_id,
+               location,
+               longitude,
+               latitude,
+               asset_status,
+               barcode,
+               rfid_tag,
+               manufacture_date,
+               start_use_date,
+               scrap_date,
+               main_image,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_assets
+    </sql>
+
+    <!-- 查询接口 -->
+    <select id="selectAssetsList" parameterType="com.ruoyi.asset.domain.Assets" resultMap="AssetsResult">
+        <include refid="selectAssetsVo"/>
+        <where>
+            and del_flag = '0'
+            <if test="assetCode != null and assetCode != ''">and asset_code = #{assetCode}</if>
+            <if test="assetName != null and assetName != ''">and asset_name like concat('%', #{assetName}, '%')</if>
+            <if test="categoryId != null">and category_id = #{categoryId}</if>
+            <if test="assetType != null and assetType != ''">and asset_type = #{assetType}</if>
+            <if test="assetSource != null and assetSource != ''">and asset_source = #{assetSource}</if>
+            <if test="brand != null and brand != ''">and brand like concat('%', #{brand}, '%')</if>
+            <if test="model != null and model != ''">and model like concat('%', #{model}, '%')</if>
+            <if test="serialNumber != null and serialNumber != ''">and serial_number = #{serialNumber}</if>
+            <if test="assetStatus != null and assetStatus != ''">and asset_status = #{assetStatus}</if>
+            <if test="deptId != null">and dept_id = #{deptId}</if>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="location != null and location != ''">and location like concat('%', #{location}, '%')</if>
+            <if test="barcode != null and barcode != ''">and barcode = #{barcode}</if>
+            <if test="rfidTag != null and rfidTag != ''">and rfid_tag = #{rfidTag}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectAssetsByIds" resultMap="AssetsResult">
+        <include refid="selectAssetsVo"/>
+        <where>
+            and delFlag = '0'
+            and id in
+               <foreach collection="array" item="id" open="(" separator="," close=")">
+                   #{id}
+               </foreach>
+        </where>
+    </select>
+
+    <select id="selectByAssetCode" resultType="com.ruoyi.asset.domain.Assets" parameterType="java.lang.String">
+        <include refid="selectAssetsVo"/>
+        where asset_code = #{assetCode} and del_flag = '0'
+    </select>
+</mapper>

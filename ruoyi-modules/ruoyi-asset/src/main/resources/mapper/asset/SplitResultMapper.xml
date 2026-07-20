@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.SplitResultMapper">
+
+    <resultMap type="SplitResult" id="SplitResultResult">
+            <result property="id" column="id"/>
+            <result property="splitId" column="split_id"/>
+            <result property="newAssetCode" column="new_asset_code"/>
+            <result property="newAssetName" column="new_asset_name"/>
+            <result property="splitQuantity" column="split_quantity"/>
+            <result property="originalValue" column="original_value"/>
+            <result property="userId" column="user_id"/>
+            <result property="deptId" column="dept_id"/>
+            <result property="location" column="location"/>
+            <result property="executeStatus" column="execute_status"/>
+            <result property="targetAssetId" column="target_asset_id"/>
+            <result property="remark" column="remark"/>
+            <result property="createTime" column="create_time"/>
+            <result property="createBy" column="create_by"/>
+            <result property="updateTime" column="update_time"/>
+            <result property="updateBy" column="update_by"/>
+            <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectSplitResultVo">
+        select id, split_id, new_asset_code, new_asset_name, split_quantity, original_value, user_id, dept_id, location, execute_status, target_asset_id, remark, create_time, create_by, update_time, update_by, del_flag
+        from asset_split_result
+    </sql>
+
+    <select id="selectSplitResultList" parameterType="SplitResult" resultMap="SplitResultResult">
+        <include refid="selectSplitResultVo"/>
+        <where>
+                        <if test="splitId != null ">
+                            and split_id = #{splitId}
+                        </if>
+                        <if test="newAssetCode != null  and newAssetCode != ''">
+                            and new_asset_code = #{newAssetCode}
+                        </if>
+                        <if test="newAssetName != null  and newAssetName != ''">
+                            and new_asset_name like concat('%', #{newAssetName}, '%')
+                        </if>
+                        <if test="splitQuantity != null ">
+                            and split_quantity = #{splitQuantity}
+                        </if>
+                        <if test="originalValue != null ">
+                            and original_value = #{originalValue}
+                        </if>
+                        <if test="userId != null ">
+                            and user_id = #{userId}
+                        </if>
+                        <if test="deptId != null ">
+                            and dept_id = #{deptId}
+                        </if>
+                        <if test="location != null  and location != ''">
+                            and location = #{location}
+                        </if>
+                        <if test="executeStatus != null  and executeStatus != ''">
+                            and execute_status = #{executeStatus}
+                        </if>
+                        <if test="targetAssetId != null ">
+                            and target_asset_id = #{targetAssetId}
+                        </if>
+        </where>
+        order by create_time desc
+    </select>
+
+</mapper>

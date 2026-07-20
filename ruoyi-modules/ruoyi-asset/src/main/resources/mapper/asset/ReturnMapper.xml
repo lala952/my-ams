@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.ReturnMapper">
+
+    <resultMap type="Return" id="ReturnResult">
+        <id property="id" column="id"/>
+        <result property="returnCode" column="return_code"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="assetName" column="asset_name"/>
+        <result property="assetCode" column="asset_code"/>
+        <result property="returnPersonId" column="return_person_id"/>
+        <result property="returnPersonName" column="return_person_name"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="returnDate" column="return_date"/>
+        <result property="businessStatus" column="business_status"/>
+        <result property="procInstId" column="proc_inst_id"/>
+        <result property="procDefId" column="proc_def_id"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectReturnVo">
+        select id,
+               return_code,
+               asset_id,
+               asset_name,
+               asset_code,
+               return_person_id,
+               return_person_name,
+               dept_id,
+               dept_name,
+               return_date,
+               business_status,
+               proc_inst_id,
+               proc_def_id,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_return
+    </sql>
+
+    <select id="selectReturnList" parameterType="Return" resultMap="ReturnResult">
+        <include refid="selectReturnVo"/>
+        <where>
+            <if test="returnCode != null and returnCode != ''">
+                AND return_code like concat('%', #{returnCode}, '%')
+            </if>
+            <if test="assetName != null and assetName != ''">
+                AND asset_name like concat('%', #{assetName}, '%')
+            </if>
+            <if test="businessStatus != null and businessStatus != ''">
+                AND business_status = #{businessStatus}
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <!-- 统计各审批状态数量 - 从工作流引擎实时获取 -->
+    <select id="countByStatus" resultType="java.util.HashMap">
+        SELECT SUM(CASE WHEN r.proc_inst_id IS NULL OR r.proc_inst_id = '' THEN 1 ELSE 0 END)    AS draft,
+               SUM(CASE WHEN r.proc_inst_id IS NOT NULL AND t.ID_ IS NOT NULL THEN 1 ELSE 0 END) AS pending,
+               SUM(CASE
+                       WHEN r.proc_inst_id IS NOT NULL AND hpi.END_TIME_ IS NOT NULL AND hv.BOOLEAN_ = 1 THEN 1
+                       ELSE 0 END)                                                               AS completed,
+               SUM(CASE
+                       WHEN r.proc_inst_id IS NOT NULL AND hpi.END_TIME_ IS NOT NULL AND hv.BOOLEAN_ = 0 THEN 1
+                       ELSE 0 END)                                                               AS rejected
+        FROM asset_return r
+                 LEFT JOIN act_ru_task t ON r.proc_inst_id = t.PROC_INST_ID_
+                 LEFT JOIN act_hi_procinst hpi ON r.proc_inst_id = hpi.PROC_INST_ID_
+                 LEFT JOIN (SELECT DISTINCT PROC_INST_ID_, BOOLEAN_
+                            FROM act_hi_varinst hv1
+                            WHERE hv1.NAME_ = 'approved'
+                              AND hv1.ID_ = (SELECT MAX(ID_)
+                                             FROM act_hi_varinst hv2
+                                             WHERE hv2.PROC_INST_ID_ = hv1.PROC_INST_ID_
+                                               AND hv2.NAME_ = 'approved')) hv ON r.proc_inst_id = hv.PROC_INST_ID_
+        WHERE r.del_flag = '0'
+    </select>
+</mapper>

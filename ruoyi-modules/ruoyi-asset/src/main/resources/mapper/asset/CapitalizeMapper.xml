@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.CapitalizeMapper">
+
+    <resultMap type="Capitalize" id="CapitalizeResult">
+        <result property="id" column="id"/>
+        <result property="capitalizeCode" column="capitalize_code"/>
+        <result property="acceptanceId" column="acceptance_id"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="capitalizeDate" column="capitalize_date"/>
+        <result property="originalValue" column="original_value"/>
+        <result property="depreciationStartDate" column="depreciation_start_date"/>
+        <result property="businessStatus " column="business_status"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectCapitalizeVo">
+        select id,
+               capitalize_code,
+               acceptance_id,
+               asset_id,
+               capitalize_date,
+               original_value,
+               depreciation_start_date,
+               business_status,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_capitalize
+    </sql>
+
+    <select id="selectCapitalizeList" parameterType="Capitalize" resultMap="CapitalizeResult">
+        <include refid="selectCapitalizeVo"/>
+        <where>
+            <if test="capitalizeCode != null  and capitalizeCode != ''">and capitalize_code = #{capitalizeCode}</if>
+            <if test="acceptanceId != null ">and acceptance_id = #{acceptanceId}</if>
+            <if test="assetId != null ">and asset_id = #{assetId}</if>
+            <if test="capitalizeDate != null ">and capitalize_date = #{capitalizeDate}</if>
+            <if test="originalValue != null ">and original_value = #{originalValue}</if>
+            <if test="depreciationStartDate != null ">and depreciation_start_date = #{depreciationStartDate}</if>
+            <if test="businessStatus != null  and businessStatus != ''">and business_status = #{businessStatus}</if>
+            AND del_flag = '0'
+        </where>
+    </select>
+
+    <select id="selectCapitalizeById" parameterType="Long" resultMap="CapitalizeResult">
+        <include refid="selectCapitalizeVo"/>
+        where id = #{id} AND del_flag = '0'
+    </select>
+
+
+</mapper>

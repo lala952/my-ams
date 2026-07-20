@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.PlanMapper">
+
+    <resultMap type="com.ruoyi.asset.domain.Plan" id="PlanResult">
+        <id property="id" column="id"/>
+        <result property="planCode" column="plan_code"/>
+        <result property="planName" column="plan_name"/>
+        <result property="year" column="year"/>
+        <result property="deptId" column="dept_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="totalBudget" column="total_budget"/>
+        <result property="businessStatus" column="business_status"/>
+        <result property="procInstId" column="proc_inst_id"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <resultMap type="com.ruoyi.asset.domain.PlanDetail" id="PlanDetailResult">
+        <id property="id" column="id"/>
+        <result property="masterId" column="master_id"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="assetName" column="asset_name"/>
+        <result property="model" column="model"/>
+        <result property="quantity" column="quantity"/>
+        <result property="estimatedPrice" column="estimated_price"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="remark" column="remark"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectPlanVo">
+        select id,
+               plan_code,
+               plan_name,
+               year,
+               dept_id,
+               user_id,
+               total_budget,
+               business_status,
+               proc_inst_id,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_plan
+    </sql>
+
+    <select id="selectPlanList" parameterType="com.ruoyi.asset.domain.Plan" resultMap="PlanResult">
+        <include refid="selectPlanVo"/>
+        <where>
+            and del_flag = '0'
+            <if test="planCode != null and planCode != ''">and plan_code = #{planCode}</if>
+            <if test="planName != null and planName != ''">and plan_name like concat('%', #{planName}, '%')</if>
+            <if test="year != null">and year = #{year}</if>
+            <if test="deptId != null">and dept_id = #{deptId}</if>
+            <if test="userId != null">and user_id = #{userId}</if>
+            <if test="businessStatus != null and businessStatus != ''">and business_status = #{businessStatus}</if>
+        </where>
+        order by id desc
+    </select>
+
+    <select id="selectPlanByIds" resultMap="PlanResult">
+        <include refid="selectPlanVo"/>
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and del_flag = '0'
+    </select>
+
+    <select id="selectDetailListByMasterId" parameterType="Long" resultMap="PlanDetailResult">
+        select id,
+               master_id,
+               category_id,
+               asset_name,
+               model,
+               quantity,
+               estimated_price,
+               total_price,
+               remark,
+               create_by,
+               create_time,
+               update_by,
+               update_time,
+               del_flag
+        from asset_plan_detail
+        where master_id = #{masterId}
+          and del_flag = '0'
+        order by id
+    </select>
+
+    <insert id="batchInsertDetail">
+        insert into asset_plan_detail (master_id, category_id, asset_name, model, quantity,
+        estimated_price, total_price, remark, create_by,
+        create_time, del_flag)
+        values
+        <foreach collection="details" item="detail" separator=",">
+            (#{detail.masterId}, #{detail.categoryId}, #{detail.assetName}, #{detail.model},
+            #{detail.quantity}, #{detail.estimatedPrice}, #{detail.totalPrice}, #{detail.remark},
+            #{detail.createBy}, sysdate(), 0)
+        </foreach>
+    </insert>
+
+    <update id="deleteDetailByMasterId">
+        update asset_plan_detail
+        set del_flag = 1
+        where master_id = #{masterId}
+    </update>
+
+</mapper>

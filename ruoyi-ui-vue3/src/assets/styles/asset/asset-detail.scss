@@ -1,0 +1,137 @@
+.form-content {
+}
+
+.footer-button-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.money-type {
+  color: var(--el-color-primary);
+}
+
+.form-section {
+  margin-bottom: 25px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  border-left: 5px solid #409EFF;
+  margin-bottom: 15px;
+  padding-left: 10px;
+}
+.section-title-normal {
+  display: flex;
+  align-items: center;
+  border-left: 5px solid #409EFF;
+  margin-bottom: 15px;
+  padding-left: 10px;
+}
+
+.code-highlight {
+  color: var(--el-color-primary);
+}
+
+.attachment-tabs {
+  margin-top: 10px;
+
+  :deep(.el-tabs__header) {
+    margin-bottom: 16px;
+  }
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.upload-tip {
+  width: 100%;
+  padding: 20px;
+  text-align: center;
+  color: var(--el-text-color-secondary);
+}
+
+.file-card {
+  width: 200px;
+  height: 120px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: var(--el-box-shadow-light);
+  }
+
+  .file-card-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+  }
+
+  .file-icon {
+    font-size: 32px;
+    color: var(--el-color-primary);
+    margin-bottom: 8px;
+  }
+
+  .file-info {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .file-name {
+    font-size: 13px;
+    color: var(--el-text-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+  }
+
+  .file-size {
+    font-size: 11px;
+    color: var(--el-text-color-secondary);
+  }
+
+  .file-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .delete-icon {
+    font-size: 16px;
+    color: var(--el-color-danger);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--el-color-danger-dark-2);
+    }
+  }
+
+  &:hover .file-actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .upload-grid {
+    justify-content: center;
+  }
+}

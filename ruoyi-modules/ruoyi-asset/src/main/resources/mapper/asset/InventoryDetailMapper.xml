@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.asset.mapper.InventoryDetailMapper">
+
+    <resultMap type="InventoryDetail" id="InventoryDetailResult">
+        <result property="id" column="id"/>
+        <result property="masterId" column="master_id"/>
+        <result property="assetId" column="asset_id"/>
+        <result property="theoreticalQuantity" column="theoretical_quantity"/>
+        <result property="actualQuantity" column="actual_quantity"/>
+        <result property="difference" column="difference"/>
+        <result property="inventoryResult" column="inventory_result"/>
+        <result property="inventoryResultDesc" column="inventory_result_desc"/>
+        <result property="inventoryPerson" column="inventory_person"/>
+        <result property="inventoryTime" column="inventory_time"/>
+        <result property="delFlag" column="del_flag"/>
+    </resultMap>
+
+    <sql id="selectInventoryDetailVo">
+        select id,
+               master_id,
+               asset_id,
+               theoretical_quantity,
+               actual_quantity,
+               difference,
+               inventory_result,
+               inventory_time,
+               del_flag
+        from asset_inventory_detail
+    </sql>
+
+    <select id="selectInventoryDetailList" parameterType="InventoryDetail" resultMap="InventoryDetailResult">
+        <include refid="selectInventoryDetailVo"/>
+        <where>
+            <if test="masterId != null ">and master_id = #{masterId}</if>
+            <if test="assetId != null ">and asset_id = #{assetId}</if>
+            <if test="theoreticalQuantity != null ">and theoretical_quantity = #{theoreticalQuantity}</if>
+            <if test="actualQuantity != null ">and actual_quantity = #{actualQuantity}</if>
+            <if test="difference != null ">and difference = #{difference}</if>
+            <if test="inventoryResult != null  and inventoryResult != ''">and inventory_result = #{inventoryResult}</if>
+            <if test="inventoryResultDesc != null  and inventoryResultDesc != ''">and inventory_result_desc =
+                #{inventoryResultDesc}
+            </if>
+            <if test="inventoryPerson != null  and inventoryPerson != ''">and inventory_person = #{inventoryPerson}</if>
+            <if test="inventoryTime != null ">and inventory_time = #{inventoryTime}</if>
+            AND del_flag = '0'
+        </where>
+    </select>
+</mapper>
