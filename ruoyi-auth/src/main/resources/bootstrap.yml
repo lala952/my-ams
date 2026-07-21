@@ -8,8 +8,8 @@ spring:
     # 应用名称
     name: ruoyi-auth
   profiles:
-    # 环境配置 开发和生产
-    active:  prod
+    # 环境配置
+    active:  dev
   cloud:
     nacos:
       discovery:
