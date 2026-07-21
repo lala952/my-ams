@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ruoyi.system.mapper.SysNoticeReadMapper">
 
-    <resultMap type="SysNoticeRead" id="SysNoticeReadResult">
+    <resultMap type="com.ruoyi.system.domain.SysNoticeRead" id="SysNoticeReadResult">
         <id property="readId" column="read_id"/>
         <result property="noticeId" column="notice_id"/>
         <result property="userId" column="user_id"/>
@@ -12,7 +12,7 @@
     </resultMap>
 
     <!-- 新增已读记录 -->
-    <insert id="insertNoticeRead" parameterType="SysNoticeRead">
+    <insert id="insertNoticeRead" parameterType="com.ruoyi.system.domain.SysNoticeRead">
         insert ignore into sys_notice_read (notice_id, user_id, read_time)
         values (#{noticeId}, #{userId}, sysdate())
     </insert>
@@ -34,7 +34,7 @@
     </select>
 
     <!-- 查询带已读状态的公告列表（使用MyBatis Plus分页插件） -->
-    <select id="selectNoticeListWithReadStatus" resultType="SysNotice">
+    <select id="selectNoticeListWithReadStatus" resultType="com.ruoyi.system.domain.SysNoticeRead">
         select n.notice_id                                                as noticeId,
                n.notice_title                                             as noticeTitle,
                n.notice_type                                              as noticeType,
