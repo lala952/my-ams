@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 资产台账管理Controller
@@ -46,6 +45,7 @@ public class AssetsController extends BaseController {
 
     @Autowired
     private GenerateCode generateCode;
+
     @Autowired
     private AssetsPdf assetsPdf;
 
@@ -125,12 +125,12 @@ public class AssetsController extends BaseController {
     @PostMapping
     public AjaxResult add(@RequestBody Assets assets) {
         log.info("【资产台账-新增】开始，资产名称：{}", assets.getAssetName());
-        
+
         if (StringUtils.isEmpty(assets.getAssetCode())) {
             assets.setAssetCode(generateCode.generateCode("ZCTZ"));
             log.info("【资产台账-新增】自动生成资产编码：{}", assets.getAssetCode());
         }
-        
+
         boolean result = assetsService.save(assets);
         if (result) {
             log.info("【资产台账-新增】成功，资产ID：{}，资产编码：{}", assets.getId(), assets.getAssetCode());
@@ -148,7 +148,7 @@ public class AssetsController extends BaseController {
     @PutMapping
     public AjaxResult edit(@RequestBody Assets assets) {
         log.info("【资产台账-修改】开始，资产ID：{}，资产编码：{}", assets.getId(), assets.getAssetCode());
-        
+
         boolean result = assetsService.updateById(assets);
         if (result) {
             log.info("【资产台账-修改】成功，资产ID：{}", assets.getId());
@@ -166,7 +166,7 @@ public class AssetsController extends BaseController {
     @DeleteMapping("/{ids}")
     public AjaxResult remove(@PathVariable Long[] ids) {
         log.info("【资产台账-删除】开始，删除数量：{}，IDs：{}", ids.length, Arrays.toString(ids));
-        
+
         boolean result = assetsService.removeByIds(Arrays.asList(ids));
         if (result) {
             log.info("【资产台账-删除】成功，删除数量：{}", ids.length);
@@ -199,13 +199,13 @@ public class AssetsController extends BaseController {
     }
 
     /**
-     * 导出资产PDF
+     * 导出资产PDF（单个）
      */
     @RequiresPermissions("asset:assets:export")
     @Log(title = "资产台账", businessType = BusinessType.EXPORT)
     @GetMapping("/pdf/{id}")
     public void exportPdf(@PathVariable Long id, HttpServletResponse response) throws Exception {
-        Assets asset = assetsService.getById(id);
+        Assets asset = assetsService.queryById(id);
         if (asset == null) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "资产不存在");
             return;
@@ -213,16 +213,33 @@ public class AssetsController extends BaseController {
         assetsPdf.exportPdf(response, asset);
     }
 
-    /** 批量导出资产台账二维码PDF */
+    /**
+     * 批量导出资产台账二维码PDF - 分页查询优化
+     * 避免一次性加载全部数据到内存导致 OOM
+     */
     @RequiresPermissions("asset:assets:export")
     @Log(title = "资产台账", businessType = BusinessType.EXPORT)
     @PostMapping("export/barcodes/pdf")
-    public void exportBarcodesPdf(HttpServletResponse response,Assets assets) throws IOException {
-        List<Assets> list = assetsService.selectAssetsList(assets);
-        AssetsPdf util = new AssetsPdf();
-        util.exportBarcodePdf(response,list);
-    }
+    public void exportBarcodesPdf(HttpServletResponse response, Assets assets) throws IOException {
+        log.info("【资产台账-批量导出条码PDF】开始");
 
+        // 1. 查询数据
+        List<Assets> list = assetsService.selectAssetsList(assets);
+
+        // 2. 校验空数据
+        if (list == null || list.isEmpty()) {
+            log.warn("【资产台账-批量导出条码PDF】没有可导出的数据");
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
+            response.getWriter().write("{\"code\":500,\"msg\":\"没有可导出的资产数据\"}");
+            return;
+        }
+
+        // 3. 调用导出（AssetsPdf 内部会自动分页，每页20条）
+        assetsPdf.exportBarcodePdf(response, list);
+
+        log.info("【资产台账-批量导出条码PDF】完成，共导出 {} 条", list.size());
+    }
 
     /**
      * 预览二维码（图片直接在浏览器显示）
@@ -288,8 +305,6 @@ public class AssetsController extends BaseController {
         response.getOutputStream().flush();
         log.info("【资产台账-二维码下载】成功，资产ID：{}，资产编码：{}", id, asset.getAssetCode());
     }
-
-    //  条码相关接口 
 
     /**
      * 预览条码（图片直接在浏览器显示）

@@ -36,8 +36,15 @@ public class AssetsPdf {
 
     private static final Logger log = LoggerFactory.getLogger(AssetsPdf.class);
 
-    @Autowired
-    private UserUtils userUtils;
+    /**
+     * 单页条码数量（每页 4列 × 5行 = 20个）
+     */
+    private static final int BARCODES_PER_PAGE = 20;
+
+    /**
+     * 每列宽度百分比
+     */
+    private static final float[] COLUMN_WIDTHS = {1, 1, 1, 1};
 
     /**
      * 导出资产信息PDF文件
@@ -60,7 +67,7 @@ public class AssetsPdf {
             // 3.设置文档边距：上20、右15、下20、左15
             document.setMargins(20, 15, 20, 15);
 
-            // 4.创建字体（普通字体和黑体）
+            // 4.创建字体（使用缓存）
             PdfFont fangsongFont = FontUtils.createFangsongFont();
             PdfFont kaiFont = FontUtils.createKaiFont();
             PdfFont heiFont = FontUtils.createHeiFont();
@@ -98,7 +105,6 @@ public class AssetsPdf {
 
     /**
      * 创建基本信息表格
-     * 展示资产的基本信息，包括资产编码、名称、分类、类型、来源、状态、规格、品牌、序列号、存放位置等
      *
      * @param assets 资产信息对象
      * @param font   使用的字体
@@ -139,7 +145,6 @@ public class AssetsPdf {
 
     /**
      * 创建财务信息表格
-     * 展示资产的财务信息，包括原值、采购价格、残值、累计折旧、净值、折旧方法、折旧率、购置日期、开始折旧日期等
      *
      * @param assets 资产信息对象
      * @param font   使用的字体
@@ -169,7 +174,6 @@ public class AssetsPdf {
 
     /**
      * 创建使用信息表格
-     * 展示资产的使用信息，包括数量、单位、使用部门、使用人、开始使用日期、生产日期、保修截止日期、报废日期、条码、RFID标签、备注等
      *
      * @param assets 资产信息对象
      * @param font   使用的字体
@@ -180,87 +184,113 @@ public class AssetsPdf {
                 .useAllAvailableWidth()
                 .setMarginBottom(15);
 
-        // 数量、单位、使用部门 todo 使用人和使用部门调用接口出错，所以这里写死
         PdfUtils.addRow8(table, font,
                 "数量", assets.getQuantity() != null ? assets.getQuantity().toString() : "0",
                 "单位", DictLabelUtils.getDictLabel(DictConstants.MEASURE_UNIT, assets.getUnit()),
                 "使用人", "用户" + assets.getUserId(),
                 "使用部门", "部门" + assets.getDeptId());
 
-        // 使用人、开始使用日期、生产日期
         PdfUtils.addRow8(table, font,
                 "开始使用日期", assets.getStartUseDate() != null ? DateUtils.parseDateToStr("yyyy-MM-dd", assets.getStartUseDate()) :  "-",
                 "生产日期",assets.getStartUseDate() != null ? DateUtils.parseDateToStr("yyyy-MM-dd", assets.getManufactureDate()) :  "-",
                 "保修截止日期",assets.getWarrantyExpireDate() != null ? DateUtils.parseDateToStr("yyyy-MM-dd", assets.getWarrantyExpireDate()) :  "-",
                 "报废日期",assets.getScrapDate() != null ? DateUtils.parseDateToStr("yyyy-MM-dd", assets.getScrapDate()) :  "-");
 
-        // RFID标签
         PdfUtils.addCellWithColspan(table, font, "RFID标签", assets.getRfidTag(), 7);
-        // 备注
         PdfUtils.addCellWithColspan(table, font, "备注", assets.getRemark(), 7);
 
         return table;
     }
 
     /**
-     * 导出资产条码PDF文件（批量）
-     * 以网格形式展示多个资产的条码，每行4个，便于打印和粘贴
+     * 导出资产条码PDF文件（批量）- 流式分页处理
+     * 每页最多 20 个条码，避免一次性加载所有数据导致 OOM
      *
      * @param response   HttpServletResponse对象，用于输出PDF文件
      * @param assetsList 资产列表
      * @throws IOException 文件输出时可能发生的IO异常
      */
     public void exportBarcodePdf(HttpServletResponse response, List<Assets> assetsList) throws IOException {
-        // 1.设置响应头
+        // 1. 校验空列表
+        if (assetsList == null || assetsList.isEmpty()) {
+            log.warn("导出条码PDF失败：资产列表为空");
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
+            response.getWriter().write("{\"code\":500,\"msg\":\"没有可导出的资产数据\"}");
+            return;
+        }
+
+        int totalSize = assetsList.size();
+        int totalPages = (int) Math.ceil((double) totalSize / BARCODES_PER_PAGE);
+        log.info("开始导出条码PDF，共 {} 条资产，分 {} 页", totalSize, totalPages);
+
+        // 2. 设置响应头
         response.setContentType("application/pdf");
         response.setCharacterEncoding("utf-8");
+        response.setHeader("Content-Disposition", "attachment;filename=barcodes.pdf");
 
-        // 2.创建PDF文档（使用A4竖版）
-        try (PdfWriter writer = new PdfWriter(response.getOutputStream());
-             PdfDocument pdf = new PdfDocument(writer);
-             Document document = new Document(pdf, PageSize.A4)) {
+        // 3. 创建PDF文档
+        try (PdfWriter writer = new PdfWriter(response.getOutputStream())) {
 
-            // 3.设置文档边距
-            document.setMargins(15, 15, 15, 15);
-
-            // 4.创建字体
+            // 4. 复用字体（单例缓存）
             PdfFont kaiFont = FontUtils.createKaiFont();
-            PdfFont HeiFont = FontUtils.createHeiFont();
+            PdfFont heiFont = FontUtils.createHeiFont();
 
-            // 5.添加主标题
-            PdfUtils.addMainTitle("资产条码", document, HeiFont);
+            // 5. 分页处理
+            for (int page = 0; page < totalPages; page++) {
+                int start = page * BARCODES_PER_PAGE;
+                int end = Math.min(start + BARCODES_PER_PAGE, totalSize);
 
-            // 6.创建4列表格用于放置条码
-            Table table = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1}))
-                    .useAllAvailableWidth();
-            table.setKeepTogether(false);
+                // 创建新页面
+                try (PdfDocument pdf = new PdfDocument(writer);
+                     Document document = new Document(pdf, PageSize.A4)) {
 
-            // 7.遍历资产列表，为每个资产创建条码单元格
-            int count = 0;
-            for (Assets asset : assetsList) {
-                // 创建单元格：包含资产名称和条码图片
-                Cell cell = new Cell()
-                        .add(new Paragraph(asset.getAssetName())
-                                .setFont(kaiFont)
-                                .setFontSize(8)
-                                .setTextAlignment(TextAlignment.CENTER)
-                                .setMarginBottom(5))
-                        .add(createBarcodeImage(asset, pdf))
-                        .setPadding(8)
-                        .setBorder(null); // 无边框
-                table.addCell(cell);
-                count++;
+                    // 如果不是第一页，需要告知 writer 创建新页面
+                    if (page > 0) {
+                        pdf.addNewPage();
+                    }
+
+                    document.setMargins(15, 15, 15, 15);
+
+                    // 添加标题（每页都有）
+                    PdfUtils.addMainTitle("资产条码", document, heiFont);
+
+                    // 创建4列表格
+                    Table table = new Table(UnitValue.createPercentArray(COLUMN_WIDTHS))
+                            .useAllAvailableWidth();
+                    table.setKeepTogether(false);
+
+                    // 处理当前页的资产
+                    for (int i = start; i < end; i++) {
+                        Assets asset = assetsList.get(i);
+                        Cell cell = new Cell()
+                                .add(new Paragraph(asset.getAssetName() != null ? asset.getAssetName() : "")
+                                        .setFont(kaiFont)
+                                        .setFontSize(8)
+                                        .setTextAlignment(TextAlignment.CENTER)
+                                        .setMarginBottom(5))
+                                .add(createBarcodeImage(asset, pdf))
+                                .setPadding(8)
+                                .setBorder(null);
+                        table.addCell(cell);
+                    }
+
+                    // 补齐剩余单元格（保持每行4个）
+                    int count = end - start;
+                    while (count % 4 != 0) {
+                        table.addCell(new Cell().setBorder(null));
+                        count++;
+                    }
+
+                    document.add(table);
+                    document.close();
+
+                    log.debug("第 {} 页条码PDF生成完成，包含 {} 条", page + 1, end - start);
+                }
             }
 
-            // 8.补齐剩余单元格，保持每行4个
-            while (count % 4 != 0) {
-                table.addCell(new Cell().setBorder(null));
-                count++;
-            }
+            log.info("条码PDF生成成功，共 {} 条资产，分 {} 页", totalSize, totalPages);
 
-            document.add(table);
-
-            log.info("资产条码PDF生成成功，共{}条", assetsList.size());
         } catch (Exception e) {
             log.error("生成资产条码PDF失败", e);
             throw new IOException("生成条码PDF失败：" + e.getMessage(), e);
@@ -269,7 +299,6 @@ public class AssetsPdf {
 
     /**
      * 创建条码图片
-     * 根据资产信息生成128条码图片
      *
      * @param asset 资产信息对象
      * @param pdf   PDF文档对象
@@ -278,7 +307,7 @@ public class AssetsPdf {
     private Image createBarcodeImage(Assets asset, PdfDocument pdf) {
         // 生成128条码
         Barcode128 barcode = new Barcode128(pdf);
-        barcode.setCode(asset.getAssetCode());
+        barcode.setCode(asset.getAssetCode() != null ? asset.getAssetCode() : "");
         barcode.setCodeType(Barcode128.CODE128);
         PdfFormXObject barcodeXObject = barcode.createFormXObject(pdf);
 
@@ -290,6 +319,4 @@ public class AssetsPdf {
 
         return barcodeImage;
     }
-
-
 }
