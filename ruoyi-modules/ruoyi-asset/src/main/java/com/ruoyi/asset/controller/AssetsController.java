@@ -7,6 +7,7 @@ import com.ruoyi.asset.utils.DictLabelUtils;
 import com.ruoyi.asset.utils.GenerateCode;
 import com.ruoyi.asset.utils.ZxingUtils;
 import com.ruoyi.common.core.utils.StringUtils;
+import com.ruoyi.common.core.utils.ip.IpUtils;
 import com.ruoyi.common.core.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.web.controller.BaseController;
 import com.ruoyi.common.core.web.domain.AjaxResult;
@@ -39,7 +40,7 @@ import java.util.List;
 public class AssetsController extends BaseController {
 
     private static final Logger log = LoggerFactory.getLogger(AssetsController.class);
-
+    private static final String BASE_URL = "http://8.156.34.198/";
     @Autowired
     private IAssetsService assetsService;
 
@@ -257,9 +258,8 @@ public class AssetsController extends BaseController {
 
         response.setContentType("image/png");
         response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-
-        String baseUrl = "http://localhost:80";
-        String qrContent = baseUrl + "/asset/assets/view?id=" + asset.getId();
+        String baseUrl = BASE_URL;
+        String qrContent = baseUrl + "asset/assets/view?id=" + asset.getId();
 
         BufferedImage image = ZxingUtils.createQRCode(qrContent, 350, 350);
         if (image == null) {
@@ -291,8 +291,7 @@ public class AssetsController extends BaseController {
         response.setContentType("image/png");
         response.setHeader("Content-Disposition", "attachment;filename=" + asset.getAssetCode() + ".png");
 
-        String baseUrl = "http://localhost:80";
-        String qrContent = baseUrl + "/asset/assets/view?id=" + asset.getId();
+        String qrContent = BASE_URL + "asset/assets/view?id=" + asset.getId();
 
         BufferedImage image = ZxingUtils.createQRCode(qrContent, 350, 350);
         if (image == null) {
