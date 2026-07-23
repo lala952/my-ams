@@ -15,9 +15,9 @@ public interface ChangeMapper extends BaseMapper<Change> {
     List<ChangeVO> selectChangeList(Change change);
 
     /**
-     * 统计各审批状态数量（关联工作流表）
+     * 按状态统计数量
      */
-    Map<String, Integer> countByBusinessStatus();
+    Integer countByBusinessStatus(@Param("status") String status);
 
     ChangeVO selectChangeById(@Param("id") Long id);
 

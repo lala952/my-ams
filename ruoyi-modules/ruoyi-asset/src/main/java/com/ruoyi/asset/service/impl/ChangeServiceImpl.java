@@ -30,7 +30,6 @@ import com.ruoyi.workflow.api.domain.vo.ProcessStartVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +37,11 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import static com.ruoyi.asset.constant.RedisConstants.ASSET_KEY;
+import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.*;
 
 @Service
 public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> implements IChangeService {
@@ -68,6 +69,8 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     @Autowired
     private ChangePdf changePdf;
 
+    // ==================== 多线程优化 ====================
+
     @Override
     public List<ChangeVO> selectChangeList(Change change) {
         return changeMapper.selectChangeList(change);
@@ -76,14 +79,34 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     @Override
     public Map<String, Integer> countByStatus() {
         try {
-            Map<String, Integer> result = changeMapper.countByBusinessStatus();
-            if (result != null) {
-                result.putIfAbsent(BusinessStatusConstants.DRAFT, 0);
-                result.putIfAbsent(BusinessStatusConstants.PENDING, 0);
-                result.putIfAbsent(BusinessStatusConstants.COMPLETED, 0);
-                result.putIfAbsent(BusinessStatusConstants.REJECTED, 0);
-                return result;
-            }
+            // 并行查询四个状态
+            CompletableFuture<Integer> draftFuture = CompletableFuture.supplyAsync(
+                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.DRAFT),
+                    EXECUTOR_SERVICE
+            );
+            CompletableFuture<Integer> pendingFuture = CompletableFuture.supplyAsync(
+                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.PENDING),
+                    EXECUTOR_SERVICE
+            );
+            CompletableFuture<Integer> completedFuture = CompletableFuture.supplyAsync(
+                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.COMPLETED),
+                    EXECUTOR_SERVICE
+            );
+            CompletableFuture<Integer> rejectedFuture = CompletableFuture.supplyAsync(
+                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.REJECTED),
+                    EXECUTOR_SERVICE
+            );
+
+            // 等待所有查询完成
+            CompletableFuture.allOf(draftFuture, pendingFuture, completedFuture, rejectedFuture).join();
+
+            Map<String, Integer> result = new HashMap<>();
+            result.put(BusinessStatusConstants.DRAFT, draftFuture.join() != null ? draftFuture.join() : 0);
+            result.put(BusinessStatusConstants.PENDING, pendingFuture.join() != null ? pendingFuture.join() : 0);
+            result.put(BusinessStatusConstants.COMPLETED, completedFuture.join() != null ? completedFuture.join() : 0);
+            result.put(BusinessStatusConstants.REJECTED, rejectedFuture.join() != null ? rejectedFuture.join() : 0);
+
+            return result;
         } catch (Exception e) {
             log.error("统计审批状态失败", e);
         }
@@ -133,7 +156,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-新增】保存变动单成功，ID：{}", change.getId());
 
         saveAssetRelations(change.getId(), change.getAssets());
-        saveAttachments(change.getId(), change.getAttachments());
+        saveAttachmentsAsync(change.getId(), change.getAttachments());
 
         log.info("【资产变动-新增】完成，变动单ID：{}，编码：{}", change.getId(), change.getChangeCode());
         return result;
@@ -164,7 +187,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-修改】更新资产关联成功，数量：{}", change.getAssets() != null ? change.getAssets().size() : 0);
 
         deleteAttachmentsByChangeId(change.getId());
-        saveAttachments(change.getId(), change.getAttachments());
+        saveAttachmentsAsync(change.getId(), change.getAttachments());
         log.info("【资产变动-修改】更新附件成功，数量：{}", change.getAttachments() != null ? change.getAttachments().size() : 0);
 
         log.info("【资产变动-修改】完成，变动单ID：{}", change.getId());
@@ -198,7 +221,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-暂存】保存变动单成功，ID：{}", change.getId());
 
         saveAssetRelations(change.getId(), change.getAssets());
-        saveAttachments(change.getId(), change.getAttachments());
+        saveAttachmentsAsync(change.getId(), change.getAttachments());
 
         log.info("【资产变动-暂存】完成，变动单ID：{}，编码：{}", change.getId(), change.getChangeCode());
         return change.getId();
@@ -219,7 +242,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             baseMapper.insert(change);
             changeId = change.getId();
             saveAssetRelations(changeId, change.getAssets());
-            saveAttachments(changeId, change.getAttachments());
+            saveAttachmentsAsync(changeId, change.getAttachments());
             log.info("【资产变动-提交】步骤1完成，新建变动单成功，ID：{}，编码：{}", changeId, change.getChangeCode());
         } else {
             log.info("【资产变动-提交】步骤1：更新已有变动单，ID：{}", changeId);
@@ -370,14 +393,14 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         saveAssetRelations(changeId, change.getAssets());
 
         deleteAttachmentsByChangeId(changeId);
-        saveAttachments(changeId, change.getAttachments());
+        saveAttachmentsAsync(changeId, change.getAttachments());
 
         log.info("【资产变动-业务数据更新】完成");
     }
+
     /**
      * 审批资产变动单
      */
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int approveChange(Long id, boolean result, String comment, Long approverId) {
@@ -431,7 +454,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
         if (result) {
             log.info("【资产变动-审批】审批通过，执行资产变更，变动单ID：{}", id);
-            executeChange(id);
+            executeChangeAsync(id);
             log.info("【资产变动-审批】资产变更执行成功");
         } else {
             log.info("【资产变动-审批】审批驳回，不执行资产变更，流程回到 submit 节点");
@@ -485,16 +508,65 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     @Override
     public void exportPdf(HttpServletResponse response, Long id) throws Exception {
-        ChangeVO change = selectChangeById(id);
-        if (change == null) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "变动单不存在");
-            return;
+        // 异步查询变动单数据
+        CompletableFuture<ChangeVO> future = CompletableFuture.supplyAsync(
+                () -> selectChangeById(id),
+                EXECUTOR_SERVICE
+        );
+
+        try {
+            ChangeVO change = future.get(30, TimeUnit.SECONDS);
+            if (change == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "变动单不存在");
+                return;
+            }
+            // 同步生成PDF（PDF生成本身是IO密集型，写入响应流必须同步）
+            changePdf.exportPdf(response, change);
+        } catch (Exception e) {
+            log.error("【资产变动-导出PDF】失败，变动单ID：{}", id, e);
+            throw new ServiceException("导出PDF失败：" + e.getMessage());
         }
-        changePdf.exportPdf(response, change);
     }
 
+    // ==================== 多线程优化核心方法 ====================
+
+    /**
+     * 异步并行保存附件（IO密集型）
+     */
+    private void saveAttachmentsAsync(Long changeId, List<ChangeAttachment> attachments) {
+        if (attachments == null || attachments.isEmpty()) {
+            log.debug("【资产变动-附件】没有附件需要保存，变动单ID：{}", changeId);
+            return;
+        }
+
+        // 前置处理：设置公共字段
+        attachments.forEach(attachment -> {
+            attachment.setMasterId(changeId);
+            attachment.setUploadBy(SecurityUtils.getUsername());
+            attachment.setUploadTime(DateUtils.getNowDate());
+        });
+
+        // 并行保存附件
+        List<CompletableFuture<Boolean>> futures = attachments.stream()
+                .map(attachment -> CompletableFuture.supplyAsync(
+                        () -> changeAttachmentService.save(attachment),
+                        EXECUTOR_SERVICE
+                ))
+                .collect(Collectors.toList());
+
+        // 等待所有保存完成
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        long successCount = futures.stream().filter(CompletableFuture::join).count();
+        log.info("【资产变动-附件】并行保存完成，变动单ID：{}，成功：{}，总数：{}",
+                changeId, successCount, attachments.size());
+    }
+
+    /**
+     * 异步并行执行资产变更（IO密集型，批量更新资产）
+     */
     @Transactional(rollbackFor = Exception.class)
-    void executeChange(Long changeId) {
+    void executeChangeAsync(Long changeId) {
         log.info("【资产变动-执行】开始执行资产变更，变动单ID：{}", changeId);
 
         String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
@@ -519,35 +591,36 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             return;
         }
 
-        int successCount = 0;
-        int failCount = 0;
-        for (Assets pendingAsset : pendingAssets) {
-            try {
-                log.info("【资产变动-执行】更新资产，资产ID：{}，资产编码：{}", pendingAsset.getId(), pendingAsset.getAssetCode());
-                pendingAsset.setUpdateBy(SecurityUtils.getUsername());
-                boolean result = assetsMapper.updateById(pendingAsset) > 0;
-                if (result) {
-                    successCount++;
-                    log.info("【资产变动-执行】资产更新成功，资产ID：{}", pendingAsset.getId());
-                } else {
-                    failCount++;
-                    log.error("【资产变动-执行】资产更新失败，资产ID：{}", pendingAsset.getId());
-                }
-            } catch (Exception e) {
-                failCount++;
-                log.error("【资产变动-执行】资产更新异常，资产ID：{}，错误：{}", pendingAsset.getId(), e.getMessage(), e);
-            }
-        }
+        // 设置公共字段
+        pendingAssets.forEach(asset -> asset.setUpdateBy(SecurityUtils.getUsername()));
 
-        log.info("【资产变动-执行】资产变更执行完成，变动单ID：{}，成功：{}，失败：{}", changeId, successCount, failCount);
+        // 并行更新资产
+        List<CompletableFuture<Boolean>> futures = pendingAssets.stream()
+                .map(asset -> CompletableFuture.supplyAsync(
+                        () -> assetsMapper.updateById(asset) > 0,
+                        EXECUTOR_SERVICE
+                ))
+                .collect(Collectors.toList());
+
+        // 等待所有更新完成
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        long successCount = futures.stream().filter(CompletableFuture::join).count();
+        long failCount = pendingAssets.size() - successCount;
+
+        log.info("【资产变动-执行】资产变更执行完成，变动单ID：{}，成功：{}，失败：{}",
+                changeId, successCount, failCount);
 
         if (failCount > 0) {
             throw new ServiceException(String.format("资产变更部分失败，成功：%d，失败：%d", successCount, failCount));
         }
 
+        // 清理Redis缓存
         stringRedisTemplate.delete(redisKey);
         log.info("【资产变动-执行】清理 Redis 缓存成功，key：{}", redisKey);
     }
+
+    // ==================== 原有辅助方法（保持不变） ====================
 
     private void saveAssetRelations(Long changeId, List<Assets> assets) {
         if (assets == null || assets.isEmpty()) {
@@ -564,28 +637,6 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         }
         changeMapper.batchInsertDetail(detailList);
         log.info("【资产变动-资产关联】保存成功，变动单ID：{}，资产数量：{}", changeId, detailList.size());
-    }
-
-    private void saveAttachments(Long changeId, List<ChangeAttachment> attachments) {
-        if (attachments == null || attachments.isEmpty()) {
-            log.debug("【资产变动-附件】没有附件需要保存，变动单ID：{}", changeId);
-            return;
-        }
-
-        int successCount = 0;
-        for (ChangeAttachment attachment : attachments) {
-            attachment.setMasterId(changeId);
-            attachment.setUploadBy(SecurityUtils.getUsername());
-            attachment.setUploadTime(DateUtils.getNowDate());
-            boolean save = changeAttachmentService.save(attachment);
-            if (save) {
-                successCount++;
-                log.debug("【资产变动-附件】保存成功，文件名：{}", attachment.getAttachmentName());
-            } else {
-                log.warn("【资产变动-附件】保存失败，文件名：{}", attachment.getAttachmentName());
-            }
-        }
-        log.info("【资产变动-附件】保存完成，变动单ID：{}，成功：{}，总数：{}", changeId, successCount, attachments.size());
     }
 
     private List<ChangeAttachment> getAttachmentsByChangeId(Long changeId) {
