@@ -61,19 +61,20 @@
     </select>
 
     <!-- 统计各审批状态数量 - 从工作流引擎实时获取 -->
+    <!-- Activiti 7.x 中布尔值存在 LONG_ 字段中，0 表示驳回，1 表示通过 -->
     <select id="countByStatus" resultType="java.util.HashMap">
         SELECT SUM(CASE WHEN s.proc_inst_id IS NULL OR s.proc_inst_id = '' THEN 1 ELSE 0 END)    AS draft,
                SUM(CASE WHEN s.proc_inst_id IS NOT NULL AND t.ID_ IS NOT NULL THEN 1 ELSE 0 END) AS pending,
                SUM(CASE
-                       WHEN s.proc_inst_id IS NOT NULL AND hpi.END_TIME_ IS NOT NULL AND hv.BOOLEAN_ = 1 THEN 1
+                       WHEN s.proc_inst_id IS NOT NULL AND hpi.END_TIME_ IS NOT NULL AND hv.APPROVED = 1 THEN 1
                        ELSE 0 END)                                                               AS completed,
                SUM(CASE
-                       WHEN s.proc_inst_id IS NOT NULL AND hpi.END_TIME_ IS NOT NULL AND hv.BOOLEAN_ = 0 THEN 1
+                       WHEN s.proc_inst_id IS NOT NULL AND hpi.END_TIME_ IS NOT NULL AND hv.APPROVED = 0 THEN 1
                        ELSE 0 END)                                                               AS rejected
         FROM asset_storage s
                  LEFT JOIN act_ru_task t ON s.proc_inst_id = t.PROC_INST_ID_
                  LEFT JOIN act_hi_procinst hpi ON s.proc_inst_id = hpi.PROC_INST_ID_
-                 LEFT JOIN (SELECT DISTINCT PROC_INST_ID_, BOOLEAN_
+                 LEFT JOIN (SELECT DISTINCT PROC_INST_ID_, LONG_ AS APPROVED
                             FROM act_hi_varinst hv1
                             WHERE hv1.NAME_ = 'approved'
                               AND hv1.ID_ = (SELECT MAX(ID_)
