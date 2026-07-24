@@ -19,6 +19,7 @@ import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.core.utils.StringUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
+import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.workflow.api.RemoteWorkflowService;
 import com.ruoyi.workflow.api.constant.BusinessStatusConstants;
 import com.ruoyi.workflow.api.constant.TaskDefinitionConstants;
@@ -48,15 +49,14 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     private static final Logger log = LoggerFactory.getLogger(ChangeServiceImpl.class);
 
-    @Resource
+    @Autowired
     private ChangeMapper changeMapper;
 
-    @Resource
+    @Autowired
     private AssetsMapper assetsMapper;
 
-    @Resource
+    @Autowired
     private RemoteWorkflowService remoteWorkflowService;
-
     @Autowired
     private IChangeAttachmentService changeAttachmentService;
 
@@ -69,7 +69,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     @Autowired
     private ChangePdf changePdf;
 
-    // ------------------------== 多线程优化 ------------------------==
+    // ---------------------- 多线程优化 ----------------------
 
     @Override
     public List<ChangeVO> selectChangeList(Change change) {
@@ -528,7 +528,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         }
     }
 
-    // ------------------------== 多线程优化核心方法 ------------------------==
+    // ---------------------- 多线程优化核心方法 ----------------------
 
     /**
      * 异步并行保存附件（IO密集型）
@@ -620,7 +620,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-执行】清理 Redis 缓存成功，key：{}", redisKey);
     }
 
-    // ------------------------== 原有辅助方法（保持不变） ------------------------==
+    // ---------------------- 原有辅助方法（保持不变） ----------------------
 
     private void saveAssetRelations(Long changeId, List<Assets> assets) {
         if (assets == null || assets.isEmpty()) {
