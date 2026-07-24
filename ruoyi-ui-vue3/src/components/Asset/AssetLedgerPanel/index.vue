@@ -744,7 +744,7 @@ function handleRemove(row, index) {
   });
 }
 
-// ==================== 资产选择器相关方法 ====================
+// ------------------------== 资产选择器相关方法 ------------------------==
 function openAssetDrawer() {
   assetDrawerVisible.value = true;
   loadSelectableAssets();

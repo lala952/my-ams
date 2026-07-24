@@ -209,7 +209,7 @@ getCookie()
   overflow: hidden;
   height: 100%;
 
-  // ========== 左侧样式 ==========
+  // --------==== 左侧样式 --------====
   .login-left {
     width: 55%;
     background: linear-gradient(135deg, #042654 0%, #0e498f 50%, #3778c8 100%);
@@ -292,7 +292,7 @@ getCookie()
     }
   }
 
-  // ========== 右侧样式 ==========
+  // --------==== 右侧样式 --------====
   .login-right {
     flex: 1;
     display: flex;
@@ -324,7 +324,7 @@ getCookie()
     }
   }
 
-  // ========== 表单样式 ==========
+  // --------==== 表单样式 --------====
   .login-form {
     width: 100%;
 
@@ -485,7 +485,7 @@ getCookie()
     }
   }
 
-  // ========== 底部样式 ==========
+  // --------==== 底部样式 --------====
   .el-login-footer {
     position: absolute;
     bottom: 24px;
@@ -499,13 +499,13 @@ getCookie()
     padding: 0 20px;
   }
 
-  // ========== 表单项间距 ==========
+  // --------==== 表单项间距 --------====
   .el-form-item {
     margin-bottom: 20px;
   }
 }
 
-// ========== 暗色主题 ==========
+// --------==== 暗色主题 --------====
 html.dark {
   .login-main {
     .login-left {
@@ -602,7 +602,7 @@ html.dark {
   }
 }
 
-// ========== 响应式 ==========
+// --------==== 响应式 --------====
 @media screen and (max-width: 992px) {
   .login-main {
     .login-left {
