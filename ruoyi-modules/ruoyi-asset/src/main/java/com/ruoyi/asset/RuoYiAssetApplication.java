@@ -9,7 +9,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @EnableCustomConfig
 @EnableRyFeignClients
-@EnableFeignClients(basePackages = {"com.ruoyi.api", "com.ruoyi.workflow", "com.ruoyi.system.api"})
+@EnableFeignClients // 添加 EnableFeignClient 启动 OpenFeign 功能
+//@EnableFeignClients(basePackages = {"com.ruoyi.api", "com.ruoyi.workflow", "com.ruoyi.system.api"})
 @EnableDiscoveryClient
 @SpringBootApplication(scanBasePackages = {"com.ruoyi.asset", "com.ruoyi.system.api", "com.ruoyi.workflow.api"})
 public class RuoYiAssetApplication {

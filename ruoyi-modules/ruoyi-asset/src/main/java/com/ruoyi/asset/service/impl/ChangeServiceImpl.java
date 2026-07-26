@@ -19,7 +19,6 @@ import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.core.utils.StringUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
-import com.ruoyi.system.api.RemoteUserService;
 import com.ruoyi.workflow.api.RemoteWorkflowService;
 import com.ruoyi.workflow.api.constant.BusinessStatusConstants;
 import com.ruoyi.workflow.api.constant.TaskDefinitionConstants;
@@ -35,14 +34,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.*;
+import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.EXECUTOR_SERVICE;
 
 @Service
 public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> implements IChangeService {
@@ -152,7 +150,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-新增】开始，变动类型：{}，资产数量：{}", change.getChangeType(), change.getAssets() != null ? change.getAssets().size() : 0);
 
         initChangeBasicInfo(change);
-        int result = baseMapper.insert(change) > 0 ? 1 : 0;
+        int result = changeMapper.insert(change) > 0 ? 1 : 0;
         log.info("【资产变动-新增】保存变动单成功，ID：{}", change.getId());
 
         saveAssetRelations(change.getId(), change.getAssets());
@@ -167,7 +165,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     public int updateChange(ChangeVO change) {
         log.info("【资产变动-修改】开始，变动单ID：{}", change.getId());
 
-        Change old = baseMapper.selectById(change.getId());
+        Change old = changeMapper.selectById(change.getId());
         if (old == null) {
             log.error("【资产变动-修改】单据不存在，ID：{}", change.getId());
             throw new ServiceException("单据不存在");
@@ -179,7 +177,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
         change.setUpdateBy(SecurityUtils.getUsername());
         change.setUpdateTime(DateUtils.getNowDate());
-        int result = baseMapper.updateById(change) > 0 ? 1 : 0;
+        int result = changeMapper.updateById(change) > 0 ? 1 : 0;
         log.info("【资产变动-修改】更新变动单成功，ID：{}", change.getId());
 
         changeMapper.deleteDetailByMasterId(change.getId());
@@ -217,7 +215,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
         initChangeBasicInfo(change);
 
-        baseMapper.insert(change);
+        changeMapper.insert(change);
         log.info("【资产变动-暂存】保存变动单成功，ID：{}", change.getId());
 
         saveAssetRelations(change.getId(), change.getAssets());
@@ -232,21 +230,22 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     public Long submitChange(ChangeVO change) {
         log.info("【资产变动-提交】开始处理，变动单ID：{}", change.getId());
         Long changeId = change.getId();
-        if (!Objects.equals(SecurityUtils.getUserId(), change.getApplicantId())) {
+        if (SecurityUtils.getUserId().equals(change.getApplicantId())) {
             throw new ServiceException("无权操作他人申请单据");
+
         }
 
         if (changeId == null) {
             log.info("【资产变动-提交】步骤1：新建变动单");
             initChangeBasicInfo(change);
-            baseMapper.insert(change);
+            changeMapper.insert(change);
             changeId = change.getId();
             saveAssetRelations(changeId, change.getAssets());
             saveAttachmentsAsync(changeId, change.getAttachments());
             log.info("【资产变动-提交】步骤1完成，新建变动单成功，ID：{}，编码：{}", changeId, change.getChangeCode());
         } else {
             log.info("【资产变动-提交】步骤1：更新已有变动单，ID：{}", changeId);
-            Change existing = baseMapper.selectById(changeId);
+            Change existing = changeMapper.selectById(changeId);
             if (existing == null) {
                 throw new ServiceException("单据不存在");
             }
@@ -281,7 +280,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                             Change updateChange = new Change();
                             updateChange.setId(changeId);
                             updateChange.setBusinessStatus(BusinessStatusConstants.PENDING);
-                            baseMapper.updateById(updateChange);
+                            changeMapper.updateById(updateChange);
                             log.info("【资产变动-提交】驳回后重新提交成功，流程实例：{}，流程流转到：managerApprove", procInstId);
                             return changeId;
                         } else {
@@ -299,7 +298,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         }
 
         log.info("【资产变动-提交】步骤2：首次提交，启动工作流");
-        Change existingChange = baseMapper.selectById(changeId);
+        Change existingChange = changeMapper.selectById(changeId);
 
         StartProcess startDTO = new StartProcess();
         startDTO.setProcessKey(WorkflowConstants.PROCESS_KEY_ASSET_CHANGE);
@@ -348,13 +347,13 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         updateChange.setProcInstId(procInstId);
         updateChange.setBusinessStatus(BusinessStatusConstants.PENDING);
         log.info("【资产变动-提交】步骤4：保存流程信息，变动单ID：{}，流程实例ID：{}，业务状态：{}", changeId, procInstId, BusinessStatusConstants.PENDING);
-        baseMapper.updateById(updateChange);
+        changeMapper.updateById(updateChange);
 
-        if (change.getAssets() != null && !change.getAssets().isEmpty()) {
+        if (!change.getAssets().isEmpty()) {
             try {
                 String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
-                String assetsJson = JSONUtil.toJsonStr(change.getAssets());
-                stringRedisTemplate.opsForValue().set(redisKey, assetsJson, RedisConstants.ASSET_CHANGE_DRAFT_TTL, TimeUnit.DAYS);
+                String json = JSONUtil.toJsonStr(change.getAssets());
+                stringRedisTemplate.opsForValue().set(redisKey, json, RedisConstants.ASSET_CHANGE_DRAFT_TTL, TimeUnit.DAYS);
                 log.info("【资产变动-提交】步骤5：保存拟变更资产数据到Redis，变动单ID：{}，资产数量：{}，缓存key：{}", changeId, change.getAssets().size(), redisKey);
             } catch (Exception e) {
                 log.error("【资产变动-提交】保存拟变更资产数据到Redis失败，变动单ID：{}", changeId, e);
@@ -365,6 +364,11 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return changeId;
     }
 
+    /**
+     * 初始化一些字段
+     *
+     * @param change
+     */
     private void initChangeBasicInfo(ChangeVO change) {
         if (StringUtils.isEmpty(change.getChangeCode())) {
             change.setChangeCode(generateCode.generateCode("ZCBD"));
@@ -386,7 +390,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         existing.setChangeReason(change.getChangeReason());
         existing.setRemark(change.getRemark());
         existing.setUpdateBy(SecurityUtils.getUsername());
-        baseMapper.updateById(existing);
+        changeMapper.updateById(existing);
         log.info("【资产变动-业务数据更新】更新主表成功");
 
         changeMapper.deleteDetailByMasterId(changeId);
@@ -407,7 +411,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-审批】开始，变动单ID：{}，审批结果：{}，审批人：{}，审批意见：{}",
                 id, result ? "通过" : "驳回", approverId, comment);
         // 1.根据ID 查询资产变动单
-        Change change = baseMapper.selectById(id);
+        Change change = changeMapper.selectById(id);
 
         if (change == null) {
             throw new ServiceException("单据不存在");
@@ -415,14 +419,13 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         if (StringUtils.isEmpty(change.getProcInstId())) {
             throw new ServiceException("未提交申请单据");
         }
-        if (Objects.equals(SecurityUtils.getUserId(), change.getApplicantId())) {
+        if (SecurityUtils.getUserId().equals(change.getApplicantId())) {
             throw new ServiceException("不能审批本人提交的申请");
         }
 
         // 2.获取当前任务
         R<CurrentTaskVO> taskResult = remoteWorkflowService.getCurrentTask(change.getProcInstId());
         if (taskResult.getCode() != R.SUCCESS || taskResult.getData() == null) {
-
             if (isProcessEnded(change.getProcInstId())) {
                 throw new ServiceException("流程已结束,无法进行审批");
             }
@@ -473,7 +476,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     public int withdrawChange(Long id) {
         log.info("【资产变动-撤回】开始，变动单ID：{}", id);
 
-        Change change = baseMapper.selectById(id);
+        Change change = changeMapper.selectById(id);
         if (change == null) {
             log.error("【资产变动-撤回】单据不存在，ID：{}", id);
             throw new ServiceException("单据不存在");
@@ -500,7 +503,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         updateChange.setId(id);
         updateChange.setProcInstId(null);
         updateChange.setBusinessStatus(BusinessStatusConstants.DRAFT);
-        baseMapper.updateById(updateChange);
+        changeMapper.updateById(updateChange);
 
         log.info("【资产变动-撤回】撤回成功，变动单ID：{}，业务状态设置为DRAFT", id);
         return 1;
@@ -620,10 +623,10 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-执行】清理 Redis 缓存成功，key：{}", redisKey);
     }
 
-    // ---------------------- 原有辅助方法（保持不变） ----------------------
+    // 原有辅助方法
 
     private void saveAssetRelations(Long changeId, List<Assets> assets) {
-        if (assets == null || assets.isEmpty()) {
+        if (assets.isEmpty()) {
             log.debug("【资产变动-资产关联】没有资产关联需要保存，变动单ID：{}", changeId);
             return;
         }
@@ -676,7 +679,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             if (endedResult != null && endedResult.getCode() == R.SUCCESS && Boolean.TRUE.equals(endedResult.getData())) {
                 log.info("【资产变动-状态更新】流程已结束，设置业务状态为 COMPLETED");
                 updateChange.setBusinessStatus(BusinessStatusConstants.COMPLETED);
-                baseMapper.updateById(updateChange);
+                changeMapper.updateById(updateChange);
                 log.info("【资产变动-状态更新】业务状态更新为 COMPLETED 成功");
                 return;
             }
@@ -689,13 +692,13 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                 if (TaskDefinitionConstants.SUBMIT.equals(currentTaskKey)) {
                     log.info("【资产变动-状态更新】审批驳回，流程回到 submit 节点，设置业务状态为 REJECTED");
                     updateChange.setBusinessStatus(BusinessStatusConstants.REJECTED);
-                    baseMapper.updateById(updateChange);
+                    changeMapper.updateById(updateChange);
                     log.info("【资产变动-状态更新】业务状态更新为 REJECTED 成功");
                     return;
                 } else {
                     log.info("【资产变动-状态更新】流程未结束，当前节点：{}，业务状态保持 PENDING", currentTaskKey);
                     updateChange.setBusinessStatus(BusinessStatusConstants.PENDING);
-                    baseMapper.updateById(updateChange);
+                    changeMapper.updateById(updateChange);
                     log.info("【资产变动-状态更新】业务状态更新为 PENDING 成功");
                     return;
                 }

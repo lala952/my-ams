@@ -18,7 +18,6 @@
         <module>ruoyi-common-sensitive</module>
         <module>ruoyi-common-datascope</module>
         <module>ruoyi-common-datasource</module>
-        <module>ruoyi-common-rabbitmq</module>
     </modules>
 
     <artifactId>ruoyi-common</artifactId>
