@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ThreadPoolExecutorConstants {
 
+
     private ThreadPoolExecutorConstants() {
     }
 
@@ -40,4 +41,13 @@ public class ThreadPoolExecutorConstants {
             },
             new ThreadPoolExecutor.CallerRunsPolicy()          // 拒绝策略
     );
+    /**
+     * 线程池常量
+     * 【修改点1】区分业务线程池和IO线程池
+     */
+    /** 业务线程池（数据库批量操作） */
+    public static ExecutorService BIZ_EXECUTOR;
+
+    /** IO密集型线程池（附件、PDF等） */
+    public static ExecutorService IO_EXECUTOR;
 }

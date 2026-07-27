@@ -211,6 +211,9 @@ public class ThreadPoolExecutorUtils {
                 System.out.println(Thread.currentThread().getName() + " -> （music）冬眠假期刚刚结束，我还有点小糊涂，鸟儿在山坡……");
             }
         });
+        executorService.execute(() -> {
+            System.out.println(Thread.currentThread().getName() +  "这是使用 lambda 表达式写的方法");
+        });
     }
 
     /**
