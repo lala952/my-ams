@@ -1,25 +1,27 @@
-    package com.ruoyi.asset.utils;
+package com.ruoyi.asset.utils;
 
 import cn.hutool.core.util.StrUtil;
 import com.ruoyi.common.core.utils.DateUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+
 import java.util.concurrent.TimeUnit;
+
 @Component
 public class GenerateCode {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateCode.class);
-    private static final String ALLOWED_PREFIX = "^[A-Z_]+$";
-    private static final int MAX_SEQ = 99999;
+    private static final String ALLOWED_PREFIX = "^[A-Z]+$"; // 前缀只允许大写字母,^ 头 $ 尾
+    private static final int MAX_SEQ = 99999; // 最大序列号
     private static final int DEFAULT_TTL = 60;
     private static final String DEFAULT_CODE_KEY_PREFIX = "code:";
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
     /**
      * 生成业务单号（唯一）
@@ -43,9 +45,10 @@ public class GenerateCode {
         String date = DateUtils.dateTimeNow("yyyyMMdd");
         String key = DEFAULT_CODE_KEY_PREFIX + codePrefix + ":" + date;
         Long seq = redisTemplate.opsForValue().increment(StrUtil.toLowerCase(key));
+
         log.debug("【Redis生成单号】key={}, seq={}", key, seq);
         // 首次创建时设置过期时间
-        if (seq !=null && seq == 1) {
+        if (seq != null && seq == 1) {
             redisTemplate.expire(key, DEFAULT_TTL, DEFAULT_TIME_UNIT);
         }
 

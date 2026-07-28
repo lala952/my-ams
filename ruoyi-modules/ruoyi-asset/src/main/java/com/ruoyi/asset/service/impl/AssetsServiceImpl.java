@@ -10,7 +10,7 @@ import com.ruoyi.common.core.utils.DateUtils;
 import com.ruoyi.common.security.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -31,8 +31,8 @@ import static com.ruoyi.asset.constant.RedisConstants.CACHE_DEFAULT_TTL;
 public class AssetsServiceImpl extends ServiceImpl<AssetsMapper, Assets> implements IAssetsService {
 
     @Autowired
+    @Qualifier(value = "AssetMapper")
     private AssetsMapper assetsMapper;
-
     @Autowired
     private GenerateCode generateCode;
 
