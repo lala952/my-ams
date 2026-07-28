@@ -5,6 +5,11 @@ import com.ruoyi.common.core.utils.DateUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -14,8 +19,8 @@ import java.util.concurrent.TimeUnit;
 public class GenerateCode {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateCode.class);
-    private static final String ALLOWED_PREFIX = "^[A-Z]+$"; // 前缀只允许大写字母,^ 头 $ 尾
-    private static final int MAX_SEQ = 99999; // 最大序列号
+    private static final String ALLOWED_PREFIX = "^[A-Z]+$"; // 前缀只号允许大写字母,^ 头 $ 尾
+    private static final int MAX_SEQ = 99999; // 最大序列
     private static final int DEFAULT_TTL = 60;
     private static final String DEFAULT_CODE_KEY_PREFIX = "code:";
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;

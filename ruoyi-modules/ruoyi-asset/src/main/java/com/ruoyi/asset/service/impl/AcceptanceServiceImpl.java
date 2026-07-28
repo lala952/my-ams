@@ -33,7 +33,7 @@ public class AcceptanceServiceImpl extends ServiceImpl<AcceptanceMapper, Accepta
      * 批量删除资产验收
      */
     public boolean removeByIds(List<Long> ids) {
-        Long[] idArray = ids.toArray(new Long[0]);
-        return acceptanceMapper.deleteAcceptanceByIds(idArray) > 0;
+//        Long[] idArray = ids.toArray(new Long[0]);
+        return acceptanceMapper.deleteBatchIds(ids) > 0;
     }
 }
