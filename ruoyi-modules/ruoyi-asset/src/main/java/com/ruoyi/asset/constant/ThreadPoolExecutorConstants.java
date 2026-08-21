@@ -9,29 +9,38 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 线程池常量配置
+ *
+ * @author wangqin
  */
 public class ThreadPoolExecutorConstants {
-
 
     private ThreadPoolExecutorConstants() {
     }
 
-    // 1. 获取 CPU 核数
+    /**
+     * 1. 获取 CPU 核数
+     */
     private static final int CPU_CORE = Runtime.getRuntime().availableProcessors();
 
-    // 2. 根据任务类型设置核心线程数（IO密集型）
+    /**
+     * 2. 根据任务类型设置核心线程数（IO密集型）
+     * CPU密集型 则为 CPU核数 + 1
+     * IO密集型 则为 CPU核数的2倍
+     */
     private static final int CORE_POOL_SIZE = CPU_CORE * 2;
     private static final int MAXIMUM_POOL_SIZE = CORE_POOL_SIZE * 2;
     private static final long KEEP_ALIVE_TIME = 60L;
 
-    // 3. 创建线程池
+    /**
+     * 3. 创建线程池
+     */
     public static final ExecutorService EXECUTOR_SERVICE = new ThreadPoolExecutor(
-            CORE_POOL_SIZE,                                    // 核心线程数
-            MAXIMUM_POOL_SIZE,                                 // 最大线程数
-            KEEP_ALIVE_TIME,                                   // 空闲线程存活时间
-            TimeUnit.SECONDS,                                  // 时间单位
-            new ArrayBlockingQueue<>(100),                     // 有界队列（防止OOM）
-            new ThreadFactory() {                              // 线程工厂（给线程起名字）
+            CORE_POOL_SIZE,
+            MAXIMUM_POOL_SIZE,
+            KEEP_ALIVE_TIME,
+            TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(100),
+            new ThreadFactory() {
                 private final AtomicInteger counter = new AtomicInteger(1);
 
                 @Override
@@ -39,15 +48,19 @@ public class ThreadPoolExecutorConstants {
                     return new Thread(r, "change-pool-thread-" + counter.getAndIncrement());
                 }
             },
-            new ThreadPoolExecutor.CallerRunsPolicy()          // 拒绝策略
+            new ThreadPoolExecutor.CallerRunsPolicy()
     );
     /**
      * 线程池常量
      * 【修改点1】区分业务线程池和IO线程池
      */
-    /** 业务线程池（数据库批量操作） */
+    /**
+     * 业务线程池（数据库批量操作）
+     */
     public static ExecutorService BIZ_EXECUTOR;
 
-    /** IO密集型线程池（附件、PDF等） */
+    /**
+     * IO密集型线程池（附件、PDF等）
+     */
     public static ExecutorService IO_EXECUTOR;
 }

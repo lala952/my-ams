@@ -2,7 +2,7 @@ package com.ruoyi.asset.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.common.collect.Lists;  // 【修改点3】Guava 分段工具
+import com.google.common.collect.Lists;
 import com.ruoyi.asset.constant.RedisConstants;
 import com.ruoyi.asset.domain.Assets;
 import com.ruoyi.asset.domain.Change;
@@ -16,7 +16,7 @@ import com.ruoyi.asset.service.IChangeAttachmentService;
 import com.ruoyi.asset.service.IChangeService;
 import com.ruoyi.asset.utils.ChangePdf;
 import com.ruoyi.asset.utils.GenerateCode;
-import com.ruoyi.asset.utils.RetryUtils;  // 【修改点2】引入重试工具类
+import com.ruoyi.asset.utils.RetryUtils;
 import com.ruoyi.common.core.domain.R;
 import com.ruoyi.common.core.exception.ServiceException;
 import com.ruoyi.common.core.utils.DateUtils;
@@ -45,16 +45,26 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.BIZ_EXECUTOR;
-import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.IO_EXECUTOR;  // 【修改点1】线程池隔离
+import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.IO_EXECUTOR;
 
 /**
  * 资产变动单Service实现类
+ * <p>
+ * 负责资产变动申请、审批、资产变更执行等核心业务逻辑处理。
+ * 集成工作流引擎实现审批流程管理，使用Redis缓存拟变更资产数据，
+ * 采用多线程异步处理和重试机制提升系统性能和稳定性。
+ * </p>
  *
- * 【整体优化说明】
- * 1. 线程池隔离：业务操作使用 BIZ_EXECUTOR，IO 操作使用 IO_EXECUTOR
- * 2. 失败重试：数据库批量操作和 Redis 操作均带 Guava Retry 重试机制
- * 3. 批量更新：审批通过后将逐条更新改为 Guava 分段批量更新，每批 100 条
- * 4. Redis 降级：Redis 异常或无数据时自动降级到数据库直查
+ * <p><b>整体优化说明：</b></p>
+ * <ul>
+ *   <li><b>线程池隔离：</b>业务操作使用 BIZ_EXECUTOR，IO操作使用 IO_EXECUTOR</li>
+ *   <li><b>失败重试：</b>数据库批量操作和Redis操作均带Guava Retry重试机制</li>
+ *   <li><b>批量更新：</b>审批通过后将逐条更新改为Guava分段批量更新，每批100条</li>
+ *   <li><b>Redis降级：</b>Redis异常或无数据时自动降级到数据库直查</li>
+ * </ul>
+ *
+ * @author wangqin
+ * @date 2026-08-21
  */
 @Service
 public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> implements IChangeService {
@@ -82,23 +92,37 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     @Autowired
     private ChangePdf changePdf;
 
-    //  查询相关 
-
+    /**
+     * 查询资产变动列表
+     * <p>
+     * 支持多条件组合查询，返回包含变动主信息和关联资产的视图对象。
+     * 查询条件包括：变动类型、业务状态、申请人、申请时间范围等。
+     * </p>
+     *
+     * @param change 查询条件对象，包含筛选字段
+     * @return 变动视图对象列表，按创建时间降序排列
+     */
     @Override
     public List<ChangeVO> selectChangeList(Change change) {
         return changeMapper.selectChangeList(change);
     }
 
     /**
-     * 并行查询四个审批状态数量
+     * 并行查询四个审批状态的数量统计
      * <p>
-     * 【修改点1】使用 BIZ_EXECUTOR 线程池并行查询
+     * 【优化点】使用 BIZ_EXECUTOR 线程池并行查询四个状态的记录数，
+     * 显著提升统计接口响应速度。
      * </p>
+     * <p>
+     * 统计的状态包括：草稿(DRAFT)、审批中(PENDING)、已完成(COMPLETED)、已驳回(REJECTED)
+     * </p>
+     *
+     * @return 状态编码到数量的映射Map，包含所有四个状态的计数；异常时返回全0的Map
      */
     @Override
     public Map<String, Integer> countByStatus() {
         try {
-            // 【修改点1】使用 BIZ_EXECUTOR 线程池并行查询四个状态
+            // 使用 BIZ_EXECUTOR 线程池并行查询四个状态
             CompletableFuture<Integer> draftFuture = CompletableFuture.supplyAsync(
                     () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.DRAFT),
                     BIZ_EXECUTOR
@@ -139,8 +163,21 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 根据ID查询变动单详情
+     * <p>
+     * 【优化点】审批中/已驳回状态优先从Redis读取拟变更资产数据，
+     * Redis异常时自动降级到数据库查询。
+     * </p>
+     * <p>
+     * 查询流程：
+     * <ol>
+     *   <li>从数据库查询变动主信息和审批状态</li>
+     *   <li>查询关联的附件列表</li>
+     *   <li>根据业务状态决定资产数据来源：审批中/已驳回从Redis读取，其他状态从数据库查询</li>
+     * </ol>
+     * </p>
      *
-     * 【修改点4】审批中/已驳回状态优先从 Redis 读取，异常时降级到数据库
+     * @param id 变动记录主键ID
+     * @return 变动视图对象，包含主信息、附件列表和资产列表；不存在时返回null
      */
     @Override
     public ChangeVO selectChangeById(Long id) {
@@ -157,7 +194,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
         if (BusinessStatusConstants.PENDING.equals(businessStatus)
                 || BusinessStatusConstants.REJECTED.equals(businessStatus)) {
-            // 【修改点4】从 Redis 读取（带降级）
+            // 从 Redis 读取（带降级）
             assets = getPendingAssetsFromRedis(id);
             log.debug("【资产变动-详情】审批中或已驳回，从 Redis 读取拟变更数据，变动单 ID：{}，状态：{}",
                     id, businessStatus);
@@ -171,10 +208,20 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return changeVO;
     }
 
-    //  新增/修改/删除 
-
     /**
      * 新增变动单
+     * <p>
+     * 事务操作，包含：
+     * <ol>
+     *   <li>初始化变动单基本信息（编码、申请人、申请时间等）</li>
+     *   <li>保存变动主表记录</li>
+     *   <li>保存资产关联关系（变动明细）</li>
+     *   <li>异步保存附件信息</li>
+     * </ol>
+     * </p>
+     *
+     * @param change 变动视图对象，包含主信息和关联数据
+     * @return 影响行数，成功返回1，失败返回0
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -195,6 +242,23 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 修改变动单
+     * <p>
+     * 事务操作，执行前校验：
+     * <ul>
+     *   <li>单据必须存在</li>
+     *   <li>已提交的（有流程实例ID）单据不可修改</li>
+     * </ul>
+     * 修改流程：
+     * <ol>
+     *   <li>更新变动主表</li>
+     *   <li>删除旧的资产关联并重新保存</li>
+     *   <li>删除旧的附件并异步保存新附件</li>
+     * </ol>
+     * </p>
+     *
+     * @param change 变动视图对象，必须包含ID
+     * @return 影响行数，成功返回1
+     * @throws ServiceException 单据不存在或已提交时抛出
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -232,7 +296,18 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     }
 
     /**
-     * 删除变动单
+     * 批量删除变动单
+     * <p>
+     * 事务操作，级联删除关联数据：
+     * <ol>
+     *   <li>删除各变动单的资产关联明细</li>
+     *   <li>删除各变动单的附件记录</li>
+     *   <li>批量删除变动主表记录</li>
+     * </ol>
+     * </p>
+     *
+     * @param ids 待删除的变动记录主键ID数组
+     * @return 实际删除的主记录条数
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -249,10 +324,15 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return result;
     }
 
-    //  暂存/提交 
-
     /**
      * 暂存变动单
+     * <p>
+     * 将变动单保存为草稿状态，不启动工作流审批流程。
+     * 后续可继续编辑或提交启动审批。
+     * </p>
+     *
+     * @param change 变动视图对象
+     * @return 保存后的变动单ID
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -272,7 +352,19 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     }
 
     /**
-     * 提交变动单（启动工作流 + Redis 缓存）
+     * 提交变动单（启动工作流 + Redis缓存）
+     * <p>
+     * 核心方法，处理三种场景：
+     * <ul>
+     *   <li><b>首次提交：</b>新建变动单 → 启动工作流 → 自动完成submit任务 → 缓存数据到Redis</li>
+     *   <li><b>驳回后重新提交：</b>更新业务数据 → 完成审批任务 → 流程流转到下一节点</li>
+     *   <li><b>流程已结束重新提交：</b>删除旧流程 → 更新数据 → 重新启动新流程</li>
+     * </ul>
+     * </p>
+     *
+     * @param change 变动视图对象
+     * @return 变动单ID（新建时返回生成的ID，已有时返回原ID）
+     * @throws ServiceException 无权操作、单据不存在、流程异常时抛出
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -426,10 +518,22 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return changeId;
     }
 
-    //  审批/撤回 
-
     /**
      * 审批资产变动单
+     * <p>
+     * 执行审批操作，完成工作流任务。
+     * <ul>
+     *   <li><b>审批通过：</b>异步执行资产变更（批量更新资产信息），状态变更为已完成</li>
+     *   <li><b>审批驳回：</b>不执行资产变更，流程回到submit节点等待重新提交</li>
+     * </ul>
+     * </p>
+     *
+     * @param id         变动单ID
+     * @param approved   是否通过（true-通过，false-驳回）
+     * @param comment    审批意见
+     * @param approverId 审批人ID
+     * @return 影响行数，成功返回1
+     * @throws ServiceException 单据不存在、未提交、流程已结束、无权审批时抛出
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -496,6 +600,14 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 撤回变动单
+     * <p>
+     * 仅允许申请人撤回流程中的变动单。
+     * 撤回后删除流程实例，业务状态恢复为草稿(DRAFT)。
+     * </p>
+     *
+     * @param id 变动单ID
+     * @return 影响行数，成功返回1
+     * @throws ServiceException 单据不存在、流程未启动、流程已结束、无权操作时抛出
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -535,16 +647,20 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return 1;
     }
 
-    //  PDF导出 
-
     /**
-     * 导出 PDF
+     * 导出PDF
+     * <p>
+     * 【优化点】使用 IO_EXECUTOR 线程池异步查询变动单数据，
+     * 提升接口响应速度。PDF生成本身是IO密集型操作，必须同步执行。
+     * </p>
      *
-     * 【修改点1】使用 IO_EXECUTOR 线程池异步查询数据
+     * @param response HTTP响应对象，用于输出PDF流
+     * @param id       变动单ID
+     * @throws Exception PDF生成或导出过程中的异常
      */
     @Override
     public void exportPdf(HttpServletResponse response, Long id) throws Exception {
-        // 【修改点1】使用 IO_EXECUTOR 线程池异步查询变动单数据
+        // 使用 IO_EXECUTOR 线程池异步查询变动单数据
         CompletableFuture<ChangeVO> future = CompletableFuture.supplyAsync(
                 () -> selectChangeById(id),
                 IO_EXECUTOR
@@ -564,15 +680,26 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         }
     }
 
-    //  【核心改造】多线程异步批量处理 
-
     /**
      * 异步并行执行资产变更
+     * <p>
+     * 【核心改造方法】采用多线程+分段批量+重试机制，优化大规模资产变更性能。
+     * </p>
+     * <p>
+     * <b>执行流程：</b>
+     * <ol>
+     *   <li>从Redis读取拟变更数据（带降级兜底）</li>
+     *   <li>设置公共字段（更新人）</li>
+     *   <li>使用Guava Lists.partition分段，每批100条</li>
+     *   <li>使用BIZ_EXECUTOR业务线程池并行批量更新</li>
+     *   <li>每批操作带Guava Retry重试机制</li>
+     *   <li>等待所有批次完成，校验执行结果</li>
+     *   <li>清理Redis缓存（带重试）</li>
+     * </ol>
+     * </p>
      *
-     * 【修改点1】使用 BIZ_EXECUTOR 业务线程池
-     * 【修改点2】使用 Guava Retry 带重试的批量更新
-     * 【修改点3】使用 Guava Lists.partition 分段批量更新，每批 100 条
-     * 【修改点4】从 Redis 读取时带降级兜底
+     * @param changeId 变动单ID
+     * @throws ServiceException 资产变更失败或部分批次失败时抛出
      */
     @Transactional(rollbackFor = Exception.class)
     void executeChangeAsync(Long changeId) {
@@ -589,16 +716,15 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         // 设置公共字段
         pendingAssets.forEach(asset -> asset.setUpdateBy(SecurityUtils.getUsername()));
 
-        // 2. 【修改点3】使用 Guava Lists.partition 分段，每批 100 条
+        // 2. 使用 Guava Lists.partition 分段，每批 100 条
         List<List<Assets>> partitions = Lists.partition(pendingAssets, 100);
         log.info("【资产变动-执行】资产总数：{}，分段数：{}，每批大小：100",
                 pendingAssets.size(), partitions.size());
 
-        // 3. 【修改点1】使用 BIZ_EXECUTOR 业务线程池并行批量更新
-        //    【修改点2】每批操作带 Guava Retry 重试
+        // 3. 使用 BIZ_EXECUTOR 业务线程池并行批量更新，每批操作带 Guava Retry 重试
         List<CompletableFuture<Boolean>> futures = partitions.stream()
                 .map(batch -> CompletableFuture.supplyAsync(() -> {
-                    // 【修改点2】带重试的批量更新
+                    // 带重试的批量更新
                     return RetryUtils.executeWithDbRetry(
                             () -> {
                                 boolean result = assetsService.updateBatchById(batch);
@@ -609,7 +735,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                             },
                             String.format("批量更新资产失败，批次大小：%d", batch.size())
                     );
-                }, BIZ_EXECUTOR))  // 【修改点1】使用业务线程池
+                }, BIZ_EXECUTOR))
                 .collect(Collectors.toList());
 
         // 4. 等待所有批次完成
@@ -637,8 +763,12 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 从 Redis 读取拟变更数据（带降级）
+     * <p>
+     * 【优化点】Redis 读取失败或数据不存在时，降级到数据库直查。
+     * </p>
      *
-     * 【修改点4】Redis 读取失败或数据不存在时，降级到数据库直查
+     * @param changeId 变动单ID
+     * @return 拟变更资产列表
      */
     private List<Assets> getPendingAssetsFromRedis(Long changeId) {
         String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
@@ -654,12 +784,12 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                 return assets;
             }
 
-            // 【修改点4】Redis 中没有数据，降级到数据库
+            // Redis 中没有数据，降级到数据库
             log.warn("【资产变动-Redis降级】Redis 中无数据，降级到数据库查询，变动单ID：{}", changeId);
             return changeMapper.selectAssetsByChangeId(changeId);
 
         } catch (Exception e) {
-            // 【修改点4】Redis 异常，降级到数据库
+            // Redis 异常，降级到数据库
             log.error("【资产变动-Redis降级】Redis 读取异常，降级到数据库查询，变动单ID：{}，异常：{}",
                     changeId, e.getMessage());
             return changeMapper.selectAssetsByChangeId(changeId);
@@ -668,8 +798,12 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 异步并行保存附件（IO密集型）
+     * <p>
+     * 【优化点】使用 IO_EXECUTOR 线程池并行保存每个附件。
+     * </p>
      *
-     * 【修改点1】使用 IO_EXECUTOR 线程池
+     * @param changeId    变动单ID
+     * @param attachments 附件列表
      */
     private void saveAttachmentsAsync(Long changeId, List<ChangeAttachment> attachments) {
         if (attachments == null || attachments.isEmpty()) {
@@ -684,7 +818,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             attachment.setUploadTime(DateUtils.getNowDate());
         });
 
-        // 【修改点1】使用 IO_EXECUTOR 线程池并行保存附件
+        // 使用 IO_EXECUTOR 线程池并行保存附件
         List<CompletableFuture<Boolean>> futures = attachments.stream()
                 .map(attachment -> CompletableFuture.supplyAsync(
                         () -> changeAttachmentService.save(attachment),
@@ -700,10 +834,10 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                 changeId, successCount, attachments.size());
     }
 
-    //  辅助方法 
-
     /**
      * 初始化变动单基本信息
+     *
+     * @param change 变动视图对象
      */
     private void initChangeBasicInfo(ChangeVO change) {
         if (StringUtils.isEmpty(change.getChangeCode())) {
@@ -721,6 +855,10 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 更新变动单业务数据
+     *
+     * @param existing 已存在的变动单
+     * @param change   新的变动数据
+     * @param changeId 变动单ID
      */
     private void updateChangeBusinessData(Change existing, ChangeVO change, Long changeId) {
         log.info("【资产变动-业务数据更新】开始，变动单ID：{}", changeId);
@@ -743,6 +881,9 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 保存资产关联关系
+     *
+     * @param changeId 变动单ID
+     * @param assets   资产列表
      */
     private void saveAssetRelations(Long changeId, List<Assets> assets) {
         if (assets.isEmpty()) {
@@ -763,6 +904,9 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 获取变动单附件列表
+     *
+     * @param changeId 变动单ID
+     * @return 附件列表
      */
     private List<ChangeAttachment> getAttachmentsByChangeId(Long changeId) {
         ChangeAttachment query = new ChangeAttachment();
@@ -772,6 +916,8 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 删除变动单附件
+     *
+     * @param changeId 变动单ID
      */
     private void deleteAttachmentsByChangeId(Long changeId) {
         changeAttachmentService.deleteByMasterId(changeId);
@@ -779,6 +925,9 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 判断流程是否已结束
+     *
+     * @param procInstId 流程实例ID
+     * @return true-已结束，false-未结束或查询失败
      */
     private boolean isProcessEnded(String procInstId) {
         try {
@@ -792,6 +941,8 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 审批后更新业务状态
+     *
+     * @param change 变动单对象
      */
     private void updateBusinessStatusAfterApproval(Change change) {
         if (change == null || StringUtils.isEmpty(change.getProcInstId())) {
