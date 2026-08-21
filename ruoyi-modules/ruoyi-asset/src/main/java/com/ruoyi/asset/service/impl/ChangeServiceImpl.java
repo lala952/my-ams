@@ -82,7 +82,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     @Autowired
     private ChangePdf changePdf;
 
-    // ==================== 查询相关 ====================
+    //  查询相关 
 
     @Override
     public List<ChangeVO> selectChangeList(Change change) {
@@ -171,7 +171,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return changeVO;
     }
 
-    // ==================== 新增/修改/删除 ====================
+    //  新增/修改/删除 
 
     /**
      * 新增变动单
@@ -249,7 +249,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return result;
     }
 
-    // ==================== 暂存/提交 ====================
+    //  暂存/提交 
 
     /**
      * 暂存变动单
@@ -426,7 +426,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return changeId;
     }
 
-    // ==================== 审批/撤回 ====================
+    //  审批/撤回 
 
     /**
      * 审批资产变动单
@@ -535,7 +535,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         return 1;
     }
 
-    // ==================== PDF导出 ====================
+    //  PDF导出 
 
     /**
      * 导出 PDF
@@ -564,7 +564,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         }
     }
 
-    // ==================== 【核心改造】多线程异步批量处理 ====================
+    //  【核心改造】多线程异步批量处理 
 
     /**
      * 异步并行执行资产变更
@@ -700,7 +700,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                 changeId, successCount, attachments.size());
     }
 
-    // ==================== 辅助方法 ====================
+    //  辅助方法 
 
     /**
      * 初始化变动单基本信息
