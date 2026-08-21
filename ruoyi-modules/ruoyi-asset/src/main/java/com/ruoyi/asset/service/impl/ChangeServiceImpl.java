@@ -41,6 +41,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.BIZ_EXECUTOR;
@@ -90,8 +91,9 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
     /**
      * 并行查询四个审批状态数量
-     *
+     * <p>
      * 【修改点1】使用 BIZ_EXECUTOR 线程池并行查询
+     * </p>
      */
     @Override
     public Map<String, Integer> countByStatus() {
