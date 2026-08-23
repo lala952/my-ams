@@ -9,7 +9,6 @@ import com.ruoyi.asset.domain.Change;
 import com.ruoyi.asset.domain.ChangeAttachment;
 import com.ruoyi.asset.domain.ChangeDetail;
 import com.ruoyi.asset.domain.vo.ChangeVO;
-import com.ruoyi.asset.mapper.AssetsMapper;
 import com.ruoyi.asset.mapper.ChangeMapper;
 import com.ruoyi.asset.service.IAssetsService;
 import com.ruoyi.asset.service.IChangeAttachmentService;
@@ -41,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.BIZ_EXECUTOR;
