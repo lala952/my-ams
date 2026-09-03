@@ -13,6 +13,9 @@ import java.util.List;
 
 /**
  * 负责审批历史记录、流程轨迹等查询功能
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @RestController
 @RequestMapping("/workflow/history")

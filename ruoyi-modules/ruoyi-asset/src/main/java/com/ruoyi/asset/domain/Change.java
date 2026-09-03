@@ -67,6 +67,7 @@ public class Change extends BaseEntity {
     @Excel(name = "审批状态", defaultValue = "无")
     private String businessStatus;
 
+    /** 备注 */
     @Excel(name = "备注", defaultValue = "无")
     private String remark;
 

@@ -5,6 +5,12 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Map;
 
+/**
+ * 完成任务请求参数
+ *
+ * @author ruoyi
+ * @date 2026-09-03
+ */
 @Data
 public class CompleteTask implements Serializable {
     private static final long serialVersionUID = 1L;

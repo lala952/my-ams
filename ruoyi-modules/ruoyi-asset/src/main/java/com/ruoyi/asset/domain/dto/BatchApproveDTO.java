@@ -7,6 +7,9 @@ import java.util.List;
 
 /**
  * 资产变动批量审批 DTO
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Data
 public class BatchApproveDTO implements Serializable {

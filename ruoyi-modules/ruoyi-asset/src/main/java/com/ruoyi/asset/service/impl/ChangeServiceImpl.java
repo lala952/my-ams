@@ -370,10 +370,6 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-提交】开始处理，变动单ID：{}", change.getId());
         Long changeId = change.getId();
 
-        if (SecurityUtils.getUserId().equals(change.getApplicantId())) {
-            throw new ServiceException("无权操作他人申请单据");
-        }
-
         if (changeId == null) {
             log.info("【资产变动-提交】步骤1：新建变动单");
             initChangeBasicInfo(change);
@@ -387,6 +383,11 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             Change existing = changeMapper.selectById(changeId);
             if (existing == null) {
                 throw new ServiceException("单据不存在");
+            }
+
+            // 校验操作权限：仅允许申请人本人重新提交自己的单据
+            if (!Objects.equals(SecurityUtils.getUserId(), existing.getApplicantId())) {
+                throw new ServiceException("无权操作他人申请单据");
             }
 
             String procInstId = existing.getProcInstId();
@@ -585,7 +586,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
 
         if (approved) {
             log.info("【资产变动-审批】审批通过，执行资产变更，变动单ID：{}", id);
-            executeChangeAsync(id);
+            executeChange(id);
             log.info("【资产变动-审批】资产变更执行成功");
         } else {
             log.info("【资产变动-审批】审批驳回，不执行资产变更，流程回到 submit 节点");
@@ -679,9 +680,12 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     }
 
     /**
-     * 异步并行执行资产变更
+     * 执行资产变更（在调用方事务内同步批量更新）
      * <p>
-     * 【核心改造方法】采用多线程+分段批量+重试机制，优化大规模资产变更性能。
+     * 【修复说明】原实现使用 {@link CompletableFuture} 结合业务线程池并行更新，
+     * 导致数据库写操作脱离当前事务，且自调用使 {@code @Transactional} 失效，
+     * 审批通过后资产变更失败无法回滚。现改为在当前事务内顺序批量更新，
+     * 保证"审批 + 资产变更"的本地事务一致性。
      * </p>
      * <p>
      * <b>执行流程：</b>
@@ -689,18 +693,15 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
      *   <li>从Redis读取拟变更数据（带降级兜底）</li>
      *   <li>设置公共字段（更新人）</li>
      *   <li>使用Guava Lists.partition分段，每批100条</li>
-     *   <li>使用BIZ_EXECUTOR业务线程池并行批量更新</li>
-     *   <li>每批操作带Guava Retry重试机制</li>
-     *   <li>等待所有批次完成，校验执行结果</li>
+     *   <li>顺序批量更新，每批带Guava Retry重试，任一批失败抛出异常整体回滚</li>
      *   <li>清理Redis缓存（带重试）</li>
      * </ol>
      * </p>
      *
      * @param changeId 变动单ID
-     * @throws ServiceException 资产变更失败或部分批次失败时抛出
+     * @throws ServiceException 资产变更失败时抛出
      */
-    @Transactional(rollbackFor = Exception.class)
-    void executeChangeAsync(Long changeId) {
+    void executeChange(Long changeId) {
         log.info("【资产变动-执行】开始执行资产变更，变动单ID：{}", changeId);
 
         // 1. 从 Redis 读取拟变更数据（带降级）
@@ -719,38 +720,26 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-执行】资产总数：{}，分段数：{}，每批大小：100",
                 pendingAssets.size(), partitions.size());
 
-        // 3. 使用 BIZ_EXECUTOR 业务线程池并行批量更新，每批操作带 Guava Retry 重试
-        List<CompletableFuture<Boolean>> futures = partitions.stream()
-                .map(batch -> CompletableFuture.supplyAsync(() -> {
-                    // 带重试的批量更新
-                    return RetryUtils.executeWithDbRetry(
-                            () -> {
-                                boolean result = assetsService.updateBatchById(batch);
-                                if (!result) {
-                                    throw new RuntimeException("数据库操作返回false");
-                                }
-                                return result;
-                            },
-                            String.format("批量更新资产失败，批次大小：%d", batch.size())
-                    );
-                }, BIZ_EXECUTOR))
-                .collect(Collectors.toList());
-
-        // 4. 等待所有批次完成
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        long successCount = futures.stream().filter(CompletableFuture::join).count();
-        long failCount = partitions.size() - successCount;
-
-        log.info("【资产变动-执行】资产变更执行完成，变动单ID：{}，成功批次：{}，失败批次：{}",
-                changeId, successCount, failCount);
-
-        if (failCount > 0) {
-            throw new ServiceException(String.format("资产变更部分批次失败，成功：%d，失败：%d",
-                    successCount, failCount));
+        // 3. 顺序批量更新：在同一事务内执行，保证审批与资产变更的原子性，任一批失败即整体回滚
+        for (List<Assets> batch : partitions) {
+            boolean result = RetryUtils.executeWithDbRetry(
+                    () -> {
+                        boolean success = assetsService.updateBatchById(batch);
+                        if (!success) {
+                            throw new RuntimeException("数据库操作返回false");
+                        }
+                        return success;
+                    },
+                    String.format("批量更新资产失败，批次大小：%d", batch.size())
+            );
+            if (!result) {
+                throw new ServiceException(String.format("资产变更失败，批次大小：%d", batch.size()));
+            }
         }
 
-        // 5. 清理Redis缓存（带重试）
+        log.info("【资产变动-执行】资产变更执行完成，变动单ID：{}，资产总数：{}", changeId, pendingAssets.size());
+
+        // 4. 清理Redis缓存（带重试）
         String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
         RetryUtils.executeWithRedisRetry(
                 () -> stringRedisTemplate.delete(redisKey),

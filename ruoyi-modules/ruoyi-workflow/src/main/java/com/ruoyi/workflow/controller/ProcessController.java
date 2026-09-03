@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
  * 流程管理 Controller
  *
  * <p>负责流程实例的生命周期管理：启动、查询状态、终止等</p>
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @RestController
 @RequestMapping("/workflow/process")

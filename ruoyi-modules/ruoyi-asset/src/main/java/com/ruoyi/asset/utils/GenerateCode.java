@@ -13,15 +13,24 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 
 @Component
 public class GenerateCode {
 
     private static final Logger log = LoggerFactory.getLogger(GenerateCode.class);
-    private static final String ALLOWED_PREFIX = "^[A-Z]+$"; // 前缀只号允许大写字母,^ 头 $ 尾
-    private static final int MAX_SEQ = 99999; // 最大序列
-    private static final int DEFAULT_TTL = 60;
+    /**
+     *  前缀只号允许大写字母,^ 头 $ 尾
+     */
+    private static final String ALLOWED_PREFIX = "^[A-Z]+$";
+    /**
+     * 最大序列
+     */
+    private static final int MAX_SEQ = 99999;
     private static final String DEFAULT_CODE_KEY_PREFIX = "code:";
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
 
@@ -52,9 +61,11 @@ public class GenerateCode {
         Long seq = redisTemplate.opsForValue().increment(StrUtil.toLowerCase(key));
 
         log.debug("【Redis生成单号】key={}, seq={}", key, seq);
-        // 首次创建时设置过期时间
+        // 首次创建时设置过期时间：到当天结束，确保序号 key 在当天内不会过期，避免生成重复单号
         if (seq != null && seq == 1) {
-            redisTemplate.expire(key, DEFAULT_TTL, DEFAULT_TIME_UNIT);
+            long remainSeconds = LocalDateTime.now()
+                    .until(LocalDate.now().plusDays(1).atStartOfDay(), ChronoUnit.SECONDS) + 1;
+            redisTemplate.expire(key, remainSeconds, DEFAULT_TIME_UNIT);
         }
 
         // 序号上限校验

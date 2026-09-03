@@ -2,6 +2,9 @@ package com.ruoyi.workflow.api.constant;
 
 /**
  * 工作流常量
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 public class WorkflowConstants {
 

@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
  * 用于将字典值(dictValue)转换为字典标签(dictLabel)
  *
  * @author ruoyi
+ * @date 2026-09-03
  *
  * 所有方法都为public static，方便直接类名加静态方法调用，静态方法不可继承或者修改
  */

@@ -5,6 +5,12 @@ import java.util.List;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.asset.domain.Split;
 
+/**
+ * 资产拆分Mapper接口
+ *
+ * @author ruoyi
+ * @date 2026-09-03
+ */
 public interface SplitMapper extends BaseMapper<Split> {
     /**
      * 查询资产拆分明细列表

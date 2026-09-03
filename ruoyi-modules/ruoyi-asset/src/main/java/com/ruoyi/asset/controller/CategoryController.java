@@ -29,6 +29,9 @@ public class CategoryController extends BaseController {
 
     /**
      * 查询资产分类列表
+     *
+     * @param category 资产分类查询条件
+     * @return 资产分类分页列表
      */
     @RequiresPermissions("asset:category:list")
     @GetMapping("/list")
@@ -39,6 +42,9 @@ public class CategoryController extends BaseController {
 
     /**
      * 导出资产分类列表
+     *
+     * @param response HTTP响应对象
+     * @param category 资产分类查询条件
      */
     @RequiresPermissions("asset:category:export")
     @Log(title = "资产分类", businessType = BusinessType.EXPORT)
@@ -57,6 +63,9 @@ public class CategoryController extends BaseController {
 
     /**
      * 获取资产分类详细信息
+     *
+     * @param id 资产分类ID
+     * @return 资产分类详细信息
      */
     @RequiresPermissions("asset:category:query")
     @GetMapping(value = "/{id}")
@@ -66,6 +75,9 @@ public class CategoryController extends BaseController {
 
     /**
      * 新增资产分类
+     *
+     * @param category 资产分类信息
+     * @return 操作结果
      */
     @RequiresPermissions("asset:category:add")
     @Log(title = "资产分类", businessType = BusinessType.INSERT)
@@ -76,6 +88,9 @@ public class CategoryController extends BaseController {
 
     /**
      * 修改资产分类
+     *
+     * @param category 资产分类信息
+     * @return 操作结果
      */
     @RequiresPermissions("asset:category:edit")
     @Log(title = "资产分类", businessType = BusinessType.UPDATE)
@@ -86,6 +101,9 @@ public class CategoryController extends BaseController {
 
     /**
      * 删除资产分类
+     *
+     * @param ids 需要删除的资产分类ID数组
+     * @return 操作结果
      */
     @RequiresPermissions("asset:category:remove")
     @Log(title = "资产分类", businessType = BusinessType.DELETE)

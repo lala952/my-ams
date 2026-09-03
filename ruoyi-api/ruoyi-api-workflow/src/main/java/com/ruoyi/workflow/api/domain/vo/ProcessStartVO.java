@@ -8,6 +8,9 @@ import java.io.Serializable;
 
 /**
  * 流程启动响应 VO
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Data
 @NoArgsConstructor
@@ -35,6 +38,13 @@ public class ProcessStartVO implements Serializable {
      */
     private Boolean started;
 
+    /**
+     * 构造流程启动响应对象
+     *
+     * @param procInstId  流程实例ID
+     * @param procDefId   流程定义ID
+     * @param businessKey 业务键（关联业务数据）
+     */
     public ProcessStartVO(String procInstId, String procDefId, String businessKey) {
         this.procInstId = procInstId;
         this.procDefId = procDefId;

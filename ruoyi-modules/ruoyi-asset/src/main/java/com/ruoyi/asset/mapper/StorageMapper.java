@@ -10,6 +10,7 @@ import java.util.Map;
  * 资产入库Mapper接口
  *
  * @author ruoyi
+ * @date 2026-09-03
  */
 public interface StorageMapper extends BaseMapper<Storage> {
 

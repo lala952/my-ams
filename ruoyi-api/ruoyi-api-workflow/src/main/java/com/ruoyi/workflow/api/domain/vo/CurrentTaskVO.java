@@ -8,6 +8,9 @@ import java.util.Date;
 
 /**
  * 当前任务 VO
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Data
 public class CurrentTaskVO implements Serializable {

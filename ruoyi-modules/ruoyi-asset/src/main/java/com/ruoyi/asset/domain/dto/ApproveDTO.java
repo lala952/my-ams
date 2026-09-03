@@ -6,6 +6,9 @@ import java.io.Serializable;
 
 /**
  * 资产变动审批 DTO
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Data
 public class ApproveDTO implements Serializable {

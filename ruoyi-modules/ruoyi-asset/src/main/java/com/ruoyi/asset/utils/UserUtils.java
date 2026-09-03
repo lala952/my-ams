@@ -10,6 +10,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+/**
+ * 用户信息工具类，封装远程用户服务调用
+ *
+ * @author ruoyi
+ * @date 2026-09-03
+ */
 @Component
 public class UserUtils {
     private static final Logger log = LoggerFactory.getLogger(UserUtils.class);
@@ -19,6 +25,10 @@ public class UserUtils {
 
     /**
      * 获取userId对应的SysUser并返回SysUser对象
+     *
+     * @param userId 用户ID
+     * @return 用户信息对象
+     * @throws ServiceException 远程调用失败时抛出
      */
     public SysUser getSysUserById(Long userId) {
         R<SysUser> res = userService.getUserById(userId, SecurityConstants.INNER);
@@ -49,6 +59,12 @@ public class UserUtils {
         return "用户" + userId;
     }
 
+    /**
+     * 获取部门名称
+     *
+     * @param deptId 部门ID
+     * @return 部门名称字符串
+     */
     public String getDeptName(Long deptId) {
         log.debug("尝试调用RemoteUserService接口获取数据，传递参数：{}", deptId);
         R<SysUser> res = userService.getUserById(deptId, SecurityConstants.INNER);

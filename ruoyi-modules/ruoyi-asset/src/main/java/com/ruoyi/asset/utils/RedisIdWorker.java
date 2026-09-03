@@ -8,6 +8,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * 基于 Redis 自增实现的分布式ID生成器
+ *
+ * @author ruoyi
+ * @date 2026-09-03
+ */
 @Component
 public class RedisIdWorker {
     // 开始时间戳
@@ -18,10 +24,21 @@ public class RedisIdWorker {
     @Autowired
     private RedisTemplate redisTemplate;
 
+    /**
+     * 构造方法，注入 RedisTemplate
+     *
+     * @param redisTemplate Redis操作模板
+     */
     public RedisIdWorker(RedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
+    /**
+     * 生成全局唯一ID
+     *
+     * @param keyPrefix 业务键前缀，用于区分不同业务的ID序列
+     * @return 全局唯一ID
+     */
     public long nextId(String keyPrefix) {
         // 1.生成时间戳
         LocalDateTime now = LocalDateTime.now();

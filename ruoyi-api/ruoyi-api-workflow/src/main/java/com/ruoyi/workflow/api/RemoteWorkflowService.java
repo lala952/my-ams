@@ -18,6 +18,9 @@ import java.util.List;
  * 工作流远程服务接口（Feign）
  *
  * <p>供其他微服务调用工作流功能</p>
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @FeignClient(contextId = "remoteWorkflowService",
         value = ServiceNameConstants.WORKFLOW_SERVICE,

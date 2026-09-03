@@ -1,5 +1,12 @@
 package com.ruoyi.workflow.api.constant;
 
+/**
+ * 业务状态常量
+ * 用于表示工作流单据的整体业务状态
+ *
+ * @author ruoyi
+ * @date 2026-09-03
+ */
 public class BusinessStatusConstants {
 
     /** 待提交 */

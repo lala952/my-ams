@@ -9,6 +9,9 @@ import java.util.Date;
 
 /**
  * 审批历史 VO
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Data
 public class ApprovalHistoryVO implements Serializable {

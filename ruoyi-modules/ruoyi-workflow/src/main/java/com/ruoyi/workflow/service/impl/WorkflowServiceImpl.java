@@ -39,6 +39,9 @@ import java.util.stream.Collectors;
 
 /**
  * 工作流服务实现类
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Service
 public class WorkflowServiceImpl implements WorkflowService {
@@ -56,6 +59,13 @@ public class WorkflowServiceImpl implements WorkflowService {
     @Autowired
     private RemoteUserService remoteUserService;
 
+    /**
+     * 启动工作流程
+     *
+     * @param process 启动参数（包含流程Key、业务Key、流程变量）
+     * @param userId  发起人ID
+     * @return 流程实例信息
+     */
     @Override
     public R<ProcessStartVO> startProcess(StartProcess process, Long userId) {
         try {
@@ -76,6 +86,13 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 完成工作任务（审批）
+     *
+     * @param c      任务参数（包含任务ID、审批结果、审批意见）
+     * @param userId 办理人ID
+     * @return 操作结果
+     */
     @Override
     public R<Void> completeTask(CompleteTask c, Long userId) {
         try {
@@ -120,6 +137,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 获取当前待办任务
+     *
+     * @param procInstId 流程实例ID
+     * @return 当前任务信息（如有多个任务，返回第一个）
+     */
     @Override
     public R<CurrentTaskVO> getCurrentTask(String procInstId) {
         try {
@@ -167,6 +190,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 获取审批历史记录
+     *
+     * @param procInstId 流程实例ID
+     * @return 按时间排序的审批历史列表
+     */
     @Override
     public R<List<ApprovalHistoryVO>> getApprovalHistory(String procInstId) {
         try {
@@ -266,6 +295,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 检查流程是否已结束
+     *
+     * @param procInstId 流程实例ID
+     * @return true-已结束，false-运行中
+     */
     @Override
     public R<Boolean> isProcessEnded(String procInstId) {
         try {
@@ -280,6 +315,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 获取流程定义XML
+     *
+     * @param procDefId 流程定义ID
+     * @return BPMN XML内容
+     */
     @Override
     public R<String> getProcessXml(String procDefId) {
         try {
@@ -298,6 +339,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 获取流程状态详情
+     *
+     * @param procInstId 流程实例ID
+     * @return 流程状态详细信息（基本信息、当前活跃节点、已完成节点）
+     */
     @Override
     public R<ProcessStatusVO> getProcessStatus(String procInstId) {
         try {
@@ -339,6 +386,13 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 删除/终止流程实例
+     *
+     * @param procInstId 流程实例ID
+     * @param reason     删除原因（可选）
+     * @return 操作结果
+     */
     @Override
     public R<Void> deleteProcessInstance(String procInstId, String reason) {
         try {
@@ -349,6 +403,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 查询个人待办任务列表
+     *
+     * @param userId 用户ID
+     * @return 待办任务列表
+     */
     @Override
     public R<List<TodoTaskVO>> getTodoTaskList(Long userId) {
         try {
@@ -428,6 +488,13 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param userId 用户ID
+     * @return 用户信息
+     * @throws ServiceException 用户ID为空或远程服务返回失败时抛出
+     */
     public SysUser getUserById(Long userId) {
         if (userId == null) {
             log.warn("【工作流-获取用户】userId 为 null");

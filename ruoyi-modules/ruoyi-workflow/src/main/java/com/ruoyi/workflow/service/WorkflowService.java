@@ -14,6 +14,9 @@ import java.util.List;
 /**
  * 工作流服务接口
  * <p>提供流程启动、任务办理、历史查询等核心工作流功能</p>
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 public interface WorkflowService {
 

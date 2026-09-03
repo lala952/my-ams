@@ -8,12 +8,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 
+/**
+ * 通用工具类，提供金额格式化、分类名称等公共方法
+ *
+ * @author ruoyi
+ * @date 2026-09-03
+ */
 public class CommonUtils {
 
     private static final Logger log = LoggerFactory.getLogger(CommonUtils.class);
 
     private static ICategoryService categoryService;
 
+    /**
+     * 注入分类服务（静态字段赋值）
+     *
+     * @param service 分类服务接口
+     */
     @Autowired
     public void setCategoryService(ICategoryService service) {
         categoryService = service;

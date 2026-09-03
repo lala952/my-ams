@@ -8,6 +8,9 @@ import java.util.List;
 
 /**
  * 流程状态 VO
+ *
+ * @author ruoyi
+ * @date 2026-09-03
  */
 @Data
 public class ProcessStatusVO implements Serializable {

@@ -3,8 +3,9 @@ package com.ruoyi.workflow.api.constant;
 /**
  * 审批节点状态常量
  * 用于表示工作流中单个审批节点的状态
- * 
+ *
  * @author ruoyi
+ * @date 2026-09-03
  */
 public class NodeStatusConstants {
 
