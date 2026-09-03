@@ -8,10 +8,18 @@ import org.springframework.boot.CommandLineRunner;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * @author xiaowang
+ * @date 2026-09-03
+ */
 public class CommandLineRunnerUtils implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(CommandLineRunnerUtils.class);
-
+    /**
+     *  CommandLineRunner 和 ApplicationRunner 一样，可以在 SpringBoot 项目启动之前进行一些操作
+     * 同样是实现接口，两个接口都只提供了一个 run() 方法
+     */
     @Override
     public void run(String... args) throws Exception {
         int availableProcessors = Runtime.getRuntime().availableProcessors();
