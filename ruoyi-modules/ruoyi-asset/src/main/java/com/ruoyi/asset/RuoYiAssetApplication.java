@@ -8,11 +8,19 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @EnableCustomConfig
-@EnableRyFeignClients
-@EnableFeignClients // 添加 EnableFeignClient 启动 OpenFeign 功能
-//@EnableFeignClients(basePackages = {"com.ruoyi.api", "com.ruoyi.workflow", "com.ruoyi.system.api"})
+// @EnableRyFeignClients  // 如果自定义注解扫描范围不够，可以去掉或保留
+@EnableFeignClients(basePackages = {
+        "com.ruoyi.asset",
+        "com.ruoyi.workflow.api",
+        "com.ruoyi.system.api",
+        "com.ruoyi.common"
+})
 @EnableDiscoveryClient
-@SpringBootApplication(scanBasePackages = {"com.ruoyi.asset", "com.ruoyi.system.api", "com.ruoyi.workflow.api"})
+@SpringBootApplication(scanBasePackages = {
+        "com.ruoyi.asset",
+        "com.ruoyi.system.api",
+        "com.ruoyi.workflow.api"
+})
 public class RuoYiAssetApplication {
     public static void main(String[] args) {
         SpringApplication.run(RuoYiAssetApplication.class, args);
