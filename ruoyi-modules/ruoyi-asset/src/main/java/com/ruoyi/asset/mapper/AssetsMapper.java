@@ -2,7 +2,9 @@ package com.ruoyi.asset.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.ruoyi.asset.domain.Assets;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.mybatis.spring.annotation.MapperScan;
 
 import java.util.List;
 
@@ -12,6 +14,7 @@ import java.util.List;
  * @author ruoyi
  * @date 2026-09-03
  */
+@Mapper
 public interface AssetsMapper extends BaseMapper<Assets> {
     /**
      * 查询资产台账列表

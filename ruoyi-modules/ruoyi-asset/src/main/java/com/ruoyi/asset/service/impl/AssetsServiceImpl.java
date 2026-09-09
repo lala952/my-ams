@@ -31,7 +31,6 @@ import static com.ruoyi.asset.constant.RedisConstants.CACHE_DEFAULT_TTL;
 public class AssetsServiceImpl extends ServiceImpl<AssetsMapper, Assets> implements IAssetsService {
 
     @Autowired
-    @Qualifier(value = "AssetMapper")
     private AssetsMapper assetsMapper;
     @Autowired
     private GenerateCode generateCode;
