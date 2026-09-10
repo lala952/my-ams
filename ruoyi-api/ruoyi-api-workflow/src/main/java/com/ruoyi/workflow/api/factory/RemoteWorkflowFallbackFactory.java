@@ -21,6 +21,7 @@ import java.util.List;
  * @author ruoyi
  * @date 2026-09-03
  */
+@Component
 public class RemoteWorkflowFallbackFactory implements FallbackFactory<RemoteWorkflowService> {
     private static final Logger log = LoggerFactory.getLogger(RemoteWorkflowFallbackFactory.class);
 
