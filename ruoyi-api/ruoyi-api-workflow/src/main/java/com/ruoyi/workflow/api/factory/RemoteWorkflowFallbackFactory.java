@@ -11,6 +11,7 @@ import com.ruoyi.workflow.api.domain.vo.ProcessStatusVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.openfeign.FallbackFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
