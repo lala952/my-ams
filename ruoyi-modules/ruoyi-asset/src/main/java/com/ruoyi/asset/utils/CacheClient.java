@@ -10,9 +10,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static com.ruoyi.asset.constant.RedisConstants.CACHE_NULL_TTL;
@@ -22,16 +21,36 @@ import static com.ruoyi.asset.constant.RedisConstants.LOCK_AMS_KEY;
 @Slf4j
 @Component
 public class CacheClient {
-    private final StringRedisTemplate stringRedisTemplate;
-
-    public CacheClient(StringRedisTemplate stringRedisTemplate) {
-        this.stringRedisTemplate = stringRedisTemplate;
-    }
-
     /**
      * 线程池
      */
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+    // private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+    private final StringRedisTemplate stringRedisTemplate;
+    /**
+     * 核心优化：使用自定义 ThreadPoolExecutor 替代 Executors.newFixedThreadPool(10)
+     * 为什么？因为 newFixedThreadPool 使用无界队列 LinkedBlockingQueue，高并发下会无限堆积任务，导致 OOM。
+     */
+    private static final ThreadPoolExecutor CACHE_REBUILD_EXECUTOR = new ThreadPoolExecutor(
+            10,                             // corePoolSize: 核心线程数
+            10,                             // maximumPoolSize: 最大线程数（缓存重建任务不多，设为10足够）
+            60L,                            // keepAliveTime: 空闲线程存活时间
+            TimeUnit.SECONDS,               // 时间单位
+            new ArrayBlockingQueue<>(100),  // workQueue: 【关键】使用有界队列，容量100，防止OOM
+            new ThreadFactory() {           // threadFactory: 自定义线程工厂，规范命名，便于排查问题
+                private final AtomicInteger threadNumber = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread thread = new Thread(r);
+                    // 规范命名，方便在日志中排查是哪个线程池报错
+                    thread.setName("cache-rebuild-thread-" + threadNumber.getAndIncrement());
+                    return thread;
+                }
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy() // handler: 拒绝策略
+    );
+    public CacheClient(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     /**
      * 写入缓存数据
@@ -43,7 +62,7 @@ public class CacheClient {
      */
     public void set(String key, Object value, Long time, TimeUnit unit) {
         stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(value), time, unit);
-        log.info("数据已缓存，key：{}，TTL：{} {}" , key, time, unit);
+        log.info("数据已缓存，key：{}，TTL：{} {}", key, time, unit);
     }
 
     /**
@@ -80,31 +99,31 @@ public class CacheClient {
         String key = keyPrefix + id;
         // 1.从 redis 查询缓存
         String json = stringRedisTemplate.opsForValue().get(key);
-        log.debug("从Redis获取缓存数据，key：{}，value：{}" , key, json);
+        log.debug("从Redis获取缓存数据，key：{}，value：{}", key, json);
 
         // 2.判断是否存在
         if (StrUtil.isNotBlank(json)) {
             // 3.存在，直接返回
-            log.debug("缓存命中，key：{}" , key);
+            log.debug("缓存命中，key：{}", key);
             return JSONUtil.toBean(json, type);
         }
         // 判断命中的是否空值(因为为空可能分 "" 和 null 两种情况)
         if (json != null) {
             // 返回一个错误信息
-            log.warn("缓存命中空对象，key：{}，数据不存在" , key);
-            throw new ServiceException("数据不存在" );
+            log.warn("缓存命中空对象，key：{}，数据不存在", key);
+            throw new ServiceException("数据不存在");
         }
 
         // 4.不存在，根据id查询数据库
-        log.debug("缓存未命中，查询数据库，id：{}" , id);
+        log.debug("缓存未命中，查询数据库，id：{}", id);
         R r = dbFallback.apply(id);
         // 5.不存在，返回错误 （缓存空对象，防缓存穿透）
         if (r == null) {
             // 将空值写入 redis
-            stringRedisTemplate.opsForValue().set(key, "" , CACHE_NULL_TTL, TimeUnit.MINUTES);
-            log.warn("数据库未查询到数据，已缓存空对象，key：{}，TTL：{}分钟" , key, CACHE_NULL_TTL);
+            stringRedisTemplate.opsForValue().set(key, "", CACHE_NULL_TTL, TimeUnit.MINUTES);
+            log.warn("数据库未查询到数据，已缓存空对象，key：{}，TTL：{}分钟", key, CACHE_NULL_TTL);
             // 返回错误信息
-            throw new ServiceException("数据不存在" );
+            throw new ServiceException("数据不存在");
         }
         // 6.存在，写入redis
         this.set(key, r, time, unit);
@@ -201,7 +220,7 @@ public class CacheClient {
             // 5.不存在，返回错误
             if (r == null) {
                 // 将空值写入redis
-                stringRedisTemplate.opsForValue().set(key, "" , CACHE_NULL_TTL, TimeUnit.MINUTES);
+                stringRedisTemplate.opsForValue().set(key, "", CACHE_NULL_TTL, TimeUnit.MINUTES);
                 // 返回错误信息
                 return null;
             }
@@ -224,7 +243,7 @@ public class CacheClient {
      * @return 获取成功返回true，获取失败返回false
      */
     private boolean tryLock(String key) {
-        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1" , 10, TimeUnit.SECONDS);
+        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
         return BooleanUtil.isTrue(flag);
     }
 
