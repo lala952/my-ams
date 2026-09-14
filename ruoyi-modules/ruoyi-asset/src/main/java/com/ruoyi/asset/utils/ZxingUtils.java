@@ -44,8 +44,6 @@ public class ZxingUtils {
     /** 默认图片格式 */
     private static final String IMAGE_FORMAT = "PNG";
 
-    //  二维码相关 
-
     /**
      * 生成二维码图片（纯二维码，不带文字）
      *
@@ -143,9 +141,6 @@ public class ZxingUtils {
         BufferedImage image = createQRCode(content);
         return imageToBase64(image);
     }
-
-    //  条码相关 
-
     /**
      * 生成Code128条码图片（纯条码）
      *
@@ -235,8 +230,6 @@ public class ZxingUtils {
         BufferedImage image = createBarCode(content);
         return imageToBase64(image);
     }
-
-    //  工具方法 
 
     /**
      * BufferedImage 转 byte[]
