@@ -58,12 +58,4 @@ public class HandoverServiceImpl extends ServiceImpl<HandoverMapper, Handover> i
         }
         return true;
     }
-
-    /**
-     * 按状态统计数量
-     */
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return handoverMapper.countByStatus();
-    }
 }

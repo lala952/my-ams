@@ -20,12 +20,4 @@ public interface AcceptanceMapper extends BaseMapper<Acceptance> {
      * @return 资产验收集合
      */
     public List<Acceptance> selectAcceptanceList(Acceptance acceptance);
-
-    /**
-     * 批量逻辑删除
-     *
-     * @param ids 需要删除的数据主键集合
-     * @return 结果
-     */
-    public int deleteAcceptanceByIds(@Param("ids") Long[] ids);
 }

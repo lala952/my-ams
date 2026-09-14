@@ -21,11 +21,4 @@ public interface ReturnMapper extends BaseMapper<Return> {
      * @return 资产归还集合
      */
     List<Return> selectReturnList(Return aReturn);
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    Map<String, Integer> countByStatus();
 }

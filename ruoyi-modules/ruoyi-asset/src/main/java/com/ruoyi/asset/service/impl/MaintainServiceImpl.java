@@ -58,11 +58,4 @@ public class MaintainServiceImpl extends ServiceImpl<MaintainMapper, Maintain> i
         return true;
     }
 
-    /**
-     * 统计各状态数量
-     */
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return maintainMapper.countByStatus();
-    }
 }

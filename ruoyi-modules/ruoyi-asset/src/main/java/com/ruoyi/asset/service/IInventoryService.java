@@ -25,14 +25,4 @@ public interface IInventoryService extends IService<Inventory> {
      * 根据主表ID数组删除盘点明细
      */
     int deleteInventoryDetailByMasterIds(Long[] ids);
-
-    /**
-     * 根据主表ID删除盘点明细
-     */
-    int deleteInventoryDetailByMasterId(Long id);
-
-    /**
-     * 批量新增盘点明细
-     */
-    int batchInventoryDetail(List<InventoryDetail> inventoryDetailList);
 }

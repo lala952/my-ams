@@ -108,12 +108,4 @@ public class MaintainController extends BaseController {
     public AjaxResult batchApprove(@RequestBody Map<String, Object> params) {
         return toAjax(maintainService.batchApprove(params));
     }
-
-    /**
-     * 统计各状态数量
-     */
-    @GetMapping("/countByStatus")
-    public AjaxResult countByStatus() {
-        return success(maintainService.countByStatus());
-    }
 }

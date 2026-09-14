@@ -45,9 +45,4 @@ public class TransferServiceImpl extends ServiceImpl<TransferMapper, Transfer> i
         }
         return true;
     }
-
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return transferMapper.countByStatus();
-    }
 }

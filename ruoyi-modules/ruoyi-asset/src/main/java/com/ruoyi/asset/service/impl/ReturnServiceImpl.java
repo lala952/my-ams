@@ -61,11 +61,4 @@ public class ReturnServiceImpl extends ServiceImpl<ReturnMapper, Return> impleme
         return true;
     }
 
-    /**
-     * 统计各状态数量
-     */
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return returnMapper.countByStatus();
-    }
 }

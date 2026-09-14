@@ -58,12 +58,4 @@ public class DisposalServiceImpl extends ServiceImpl<DisposalMapper, Disposal> i
         }
         return true;
     }
-
-    /**
-     * 按状态统计数量
-     */
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return disposalMapper.countByStatus();
-    }
 }

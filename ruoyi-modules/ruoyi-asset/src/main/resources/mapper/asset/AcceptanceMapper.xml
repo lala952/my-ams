@@ -56,10 +56,4 @@
         </where>
     </select>
 
-    <select id="selectAcceptanceById" parameterType="Long" resultMap="AcceptanceResult">
-        <include refid="selectAcceptanceVo"/>
-        where id = #{id} AND del_flag = '0'
-    </select>
-
-
 </mapper>

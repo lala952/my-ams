@@ -21,11 +21,4 @@ public interface ReceiveMapper extends BaseMapper<Receive> {
      * @return 资产领用集合
      */
     List<Receive> selectReceiveList(Receive receive);
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    Map<String, Integer> countByStatus();
 }

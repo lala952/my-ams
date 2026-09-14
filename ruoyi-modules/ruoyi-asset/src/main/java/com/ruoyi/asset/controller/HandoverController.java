@@ -108,11 +108,4 @@ public class HandoverController extends BaseController {
         return toAjax(handoverService.batchApprove(params));
     }
 
-    /**
-     * 统计各状态数量
-     */
-    @GetMapping("/countByStatus")
-    public AjaxResult countByStatus() {
-        return success(handoverService.countByStatus());
-    }
 }

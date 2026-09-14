@@ -16,6 +16,4 @@ public interface IReturnService extends IService<Return> {
     List<Return> selectReturnList(Return aReturn);
 
     boolean batchApprove(Map<String, Object> params);
-
-    Map<String, Integer> countByStatus();
 }

@@ -28,11 +28,4 @@ public interface IReceiveService extends IService<Receive> {
      * @return 结果
      */
     boolean batchApprove(Map<String, Object> params);
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    Map<String, Integer> countByStatus();
 }

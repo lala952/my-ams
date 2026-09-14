@@ -76,22 +76,6 @@ public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory
     }
 
     /**
-     * 批量新增盘点明细
-     */
-    @Override
-    public int batchInventoryDetail(List<InventoryDetail> inventoryDetailList) {
-        return inventoryMapper.batchInventoryDetail(inventoryDetailList);
-    }
-
-    /**
-     * 删除盘点明细信息
-     */
-    @Override
-    public int deleteInventoryDetailByMasterId(Long id) {
-        return inventoryMapper.deleteInventoryDetailByMasterId(id);
-    }
-
-    /**
      * 新增资产盘点明细信息
      */
     public void insertInventoryDetail(Inventory inventory) {

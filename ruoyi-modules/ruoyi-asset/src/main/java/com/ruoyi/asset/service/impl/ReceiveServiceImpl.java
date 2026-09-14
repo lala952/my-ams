@@ -63,11 +63,4 @@ public class ReceiveServiceImpl extends ServiceImpl<ReceiveMapper, Receive> impl
         return true;
     }
 
-    /**
-     * 统计各状态数量
-     */
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return receiveMapper.countByStatus();
-    }
 }

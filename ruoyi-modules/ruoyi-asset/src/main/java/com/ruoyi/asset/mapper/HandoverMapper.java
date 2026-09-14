@@ -20,11 +20,4 @@ public interface HandoverMapper extends BaseMapper<Handover> {
      * @return 资产交接集合
      */
     List<Handover> selectHandoverList(Handover handover);
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    Map<String, Integer> countByStatus();
 }

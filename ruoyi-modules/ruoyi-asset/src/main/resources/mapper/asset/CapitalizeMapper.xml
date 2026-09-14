@@ -53,10 +53,4 @@
         </where>
     </select>
 
-    <select id="selectCapitalizeById" parameterType="Long" resultMap="CapitalizeResult">
-        <include refid="selectCapitalizeVo"/>
-        where id = #{id} AND del_flag = '0'
-    </select>
-
-
 </mapper>

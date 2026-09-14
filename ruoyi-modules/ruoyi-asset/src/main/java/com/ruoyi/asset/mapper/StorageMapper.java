@@ -21,11 +21,4 @@ public interface StorageMapper extends BaseMapper<Storage> {
      * @return 资产入库集合
      */
     List<Storage> selectStorageList(Storage storage);
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    Map<String, Integer> countByStatus();
 }

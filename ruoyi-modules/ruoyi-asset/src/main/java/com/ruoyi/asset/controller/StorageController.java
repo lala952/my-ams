@@ -106,12 +106,4 @@ public class StorageController extends BaseController {
     public AjaxResult batchApprove(@RequestBody Map<String, Object> params) {
         return toAjax(storageService.batchApprove(params));
     }
-
-    /**
-     * 统计各状态数量
-     */
-    @GetMapping("/countByStatus")
-    public AjaxResult countByStatus() {
-        return success(storageService.countByStatus());
-    }
 }

@@ -75,14 +75,4 @@ public class StorageServiceImpl extends ServiceImpl<StorageMapper, Storage> impl
 
         return true;
     }
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    @Override
-    public Map<String, Integer> countByStatus() {
-        return storageMapper.countByStatus();
-    }
 }

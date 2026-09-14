@@ -20,11 +20,4 @@ public interface MaintainMapper extends BaseMapper<Maintain> {
      * @return 资产维修集合
      */
     List<Maintain> selectMaintainList(Maintain maintain);
-
-    /**
-     * 统计各状态数量
-     *
-     * @return 状态统计结果
-     */
-    Map<String, Integer> countByStatus();
 }

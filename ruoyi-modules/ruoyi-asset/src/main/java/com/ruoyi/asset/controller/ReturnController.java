@@ -107,12 +107,4 @@ public class ReturnController extends BaseController {
     public AjaxResult batchApprove(@RequestBody Map<String, Object> params) {
         return toAjax(returnService.batchApprove(params));
     }
-
-    /**
-     * 统计各状态数量
-     */
-    @GetMapping("/countByStatus")
-    public AjaxResult countByStatus() {
-        return success(returnService.countByStatus());
-    }
 }
