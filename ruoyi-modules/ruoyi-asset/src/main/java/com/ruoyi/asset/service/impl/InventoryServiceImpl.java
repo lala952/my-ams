@@ -5,13 +5,14 @@ import com.ruoyi.asset.domain.Inventory;
 import com.ruoyi.asset.domain.InventoryDetail;
 import com.ruoyi.asset.mapper.InventoryMapper;
 import com.ruoyi.asset.service.IInventoryService;
+import com.ruoyi.asset.utils.GenerateCode;
 import com.ruoyi.asset.utils.RedisIdWorker;
 import com.ruoyi.common.core.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -27,11 +28,8 @@ import java.util.List;
 public class InventoryServiceImpl extends ServiceImpl<InventoryMapper, Inventory> implements IInventoryService {
     @Autowired
     private InventoryMapper inventoryMapper;
-
-    @Autowired
+    @Resource
     private RedisIdWorker redisIdWorker;
-    @Autowired
-    private RedisTemplate redisTemplate;
 
     /**
      * 查询资产盘点列表
