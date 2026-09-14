@@ -8,7 +8,6 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @EnableCustomConfig
-// @EnableRyFeignClients  // 如果自定义注解扫描范围不够，可以去掉或保留
 @EnableFeignClients(basePackages = {
         "com.ruoyi.asset",
         "com.ruoyi.workflow.api",
