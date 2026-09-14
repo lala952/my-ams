@@ -16,11 +16,17 @@ import java.time.format.DateTimeFormatter;
  */
 @Component
 public class RedisIdWorker {
-    // 开始时间戳
+    /**
+     * 开始时间戳
+     */
     private static final long BEGIN_TIMESTAMP = LocalDateTime.of(2026, 1, 1, 0, 0, 0).toEpochSecond(ZoneOffset.UTC);
-    // 序列号位数
+    /**
+     * 序列号位数
+     */
     private static final int COUNT_BITS = 32;
-    // 注入缓存
+    /**
+     * 注入缓存
+     */
     @Autowired
     private RedisTemplate redisTemplate;
 
