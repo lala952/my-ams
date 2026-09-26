@@ -39,11 +39,12 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.BIZ_EXECUTOR;
-import static com.ruoyi.asset.constant.ThreadPoolExecutorConstants.IO_EXECUTOR;
+import static com.ruoyi.asset.config.ThreadPoolExecutorConfig.BIZ_EXECUTOR;
+import static com.ruoyi.asset.config.ThreadPoolExecutorConfig.IO_EXECUTOR;
 
 /**
  * 资产变动单Service实现类
@@ -119,8 +120,10 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
      */
     @Override
     public Map<String, Integer> countByStatus() {
+        // 创建 CompletableFuture 的两种方式：1、通过new关键字 2、通过其自带的 supplyAsync()、runAsync()
+        // CompletableFuture<Object> completableFuture = new CompletableFuture<>();
         try {
-            // 使用 BIZ_EXECUTOR 线程池并行查询四个状态
+            // 1.使用 BIZ_EXECUTOR 线程池并行查询四个状态
             CompletableFuture<Integer> draftFuture = CompletableFuture.supplyAsync(
                     () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.DRAFT),
                     BIZ_EXECUTOR
@@ -137,8 +140,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                     () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.REJECTED),
                     BIZ_EXECUTOR
             );
-
-            // 等待所有查询完成
+            // 2.等待所有查询完成
             CompletableFuture.allOf(draftFuture, pendingFuture, completedFuture, rejectedFuture).join();
 
             Map<String, Integer> result = new HashMap<>();

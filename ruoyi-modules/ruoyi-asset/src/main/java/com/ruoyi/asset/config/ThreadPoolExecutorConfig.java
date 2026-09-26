@@ -1,22 +1,12 @@
-package com.ruoyi.asset.constant;
+package com.ruoyi.asset.config;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * 线程池常量配置
- *
- * @author wangqin
- */
-public class ThreadPoolExecutorConstants {
+public class ThreadPoolExecutorConfig {
+    private ThreadPoolExecutorConfig() {
 
-    private ThreadPoolExecutorConstants() {
     }
-
     /**
      * 1. 获取 CPU 核数
      */
@@ -54,6 +44,7 @@ public class ThreadPoolExecutorConstants {
      * 线程池常量
      * 【修改点1】区分业务线程池和IO线程池
      */
+
     /**
      * 业务线程池（数据库批量操作）
      */
