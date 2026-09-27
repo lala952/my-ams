@@ -148,7 +148,6 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             result.put(BusinessStatusConstants.PENDING, pendingFuture.join() != null ? pendingFuture.join() : 0);
             result.put(BusinessStatusConstants.COMPLETED, completedFuture.join() != null ? completedFuture.join() : 0);
             result.put(BusinessStatusConstants.REJECTED, rejectedFuture.join() != null ? rejectedFuture.join() : 0);
-
             return result;
         } catch (Exception e) {
             log.error("【资产变动-统计】统计审批状态失败", e);
