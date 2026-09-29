@@ -2478,6 +2478,7 @@ CREATE TABLE `asset_change`  (
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci NULL DEFAULT NULL COMMENT '备注',
   `proc_inst_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci NULL DEFAULT NULL COMMENT '流程实例ID',
   `business_status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci NULL DEFAULT 'draft' COMMENT '业务状态：draft-草稿，pending-办理中，rejected-已退回，completed-已完成',
+  `change_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci NULL COMMENT '拟变更资产数据快照(JSON)',
   `create_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci NULL DEFAULT NULL COMMENT '创建人',
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_as_ci NULL DEFAULT NULL COMMENT '更新人',

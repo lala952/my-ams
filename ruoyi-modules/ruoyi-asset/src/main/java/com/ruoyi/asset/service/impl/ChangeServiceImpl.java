@@ -38,13 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static com.ruoyi.asset.config.ThreadPoolExecutorConfig.BIZ_EXECUTOR;
-import static com.ruoyi.asset.config.ThreadPoolExecutorConfig.IO_EXECUTOR;
 
 /**
  * 资产变动单Service实现类
@@ -56,10 +50,9 @@ import static com.ruoyi.asset.config.ThreadPoolExecutorConfig.IO_EXECUTOR;
  *
  * <p><b>整体优化说明：</b></p>
  * <ul>
- *   <li><b>线程池隔离：</b>业务操作使用 BIZ_EXECUTOR，IO操作使用 IO_EXECUTOR</li>
  *   <li><b>失败重试：</b>数据库批量操作和Redis操作均带Guava Retry重试机制</li>
  *   <li><b>批量更新：</b>审批通过后将逐条更新改为Guava分段批量更新，每批100条</li>
- *   <li><b>Redis降级：</b>Redis异常或无数据时自动降级到数据库直查</li>
+ *   <li><b>Redis降级：</b>Redis异常或未命中时降级到数据库快照兜底</li>
  * </ul>
  *
  * @author wangqin
@@ -107,57 +100,25 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     }
 
     /**
-     * 并行查询四个审批状态的数量统计
+     * 查询四个审批状态的数量统计
      * <p>
-     * 【优化点】使用 BIZ_EXECUTOR 线程池并行查询四个状态的记录数，
-     * 显著提升统计接口响应速度。
+     * 原实现使用 CompletableFuture 并行查询，但 BIZ_EXECUTOR 未初始化会 NPE，
+     * 且四个 COUNT 查询本身很快，并行无收益；改为顺序查询，逻辑简单可靠。
      * </p>
      * <p>
      * 统计的状态包括：草稿(DRAFT)、审批中(PENDING)、已完成(COMPLETED)、已驳回(REJECTED)
      * </p>
      *
-     * @return 状态编码到数量的映射Map，包含所有四个状态的计数；异常时返回全0的Map
+     * @return 状态编码到数量的映射Map
      */
     @Override
     public Map<String, Integer> countByStatus() {
-        // 创建 CompletableFuture 的两种方式：1、通过new关键字 2、通过其自带的 supplyAsync()、runAsync()
-        // CompletableFuture<Object> completableFuture = new CompletableFuture<>();
-        try {
-            // 1.使用 BIZ_EXECUTOR 线程池并行查询四个状态
-            CompletableFuture<Integer> draftFuture = CompletableFuture.supplyAsync(
-                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.DRAFT),
-                    BIZ_EXECUTOR
-            );
-            CompletableFuture<Integer> pendingFuture = CompletableFuture.supplyAsync(
-                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.PENDING),
-                    BIZ_EXECUTOR
-            );
-            CompletableFuture<Integer> completedFuture = CompletableFuture.supplyAsync(
-                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.COMPLETED),
-                    BIZ_EXECUTOR
-            );
-            CompletableFuture<Integer> rejectedFuture = CompletableFuture.supplyAsync(
-                    () -> changeMapper.countByBusinessStatus(BusinessStatusConstants.REJECTED),
-                    BIZ_EXECUTOR
-            );
-            // 2.等待所有查询完成
-            CompletableFuture.allOf(draftFuture, pendingFuture, completedFuture, rejectedFuture).join();
-
-            Map<String, Integer> result = new HashMap<>();
-            result.put(BusinessStatusConstants.DRAFT, draftFuture.join() != null ? draftFuture.join() : 0);
-            result.put(BusinessStatusConstants.PENDING, pendingFuture.join() != null ? pendingFuture.join() : 0);
-            result.put(BusinessStatusConstants.COMPLETED, completedFuture.join() != null ? completedFuture.join() : 0);
-            result.put(BusinessStatusConstants.REJECTED, rejectedFuture.join() != null ? rejectedFuture.join() : 0);
-            return result;
-        } catch (Exception e) {
-            log.error("【资产变动-统计】统计审批状态失败", e);
-        }
-        Map<String, Integer> empty = new HashMap<>();
-        empty.put(BusinessStatusConstants.DRAFT, 0);
-        empty.put(BusinessStatusConstants.PENDING, 0);
-        empty.put(BusinessStatusConstants.COMPLETED, 0);
-        empty.put(BusinessStatusConstants.REJECTED, 0);
-        return empty;
+        Map<String, Integer> result = new HashMap<>();
+        result.put(BusinessStatusConstants.DRAFT, changeMapper.countByBusinessStatus(BusinessStatusConstants.DRAFT));
+        result.put(BusinessStatusConstants.PENDING, changeMapper.countByBusinessStatus(BusinessStatusConstants.PENDING));
+        result.put(BusinessStatusConstants.COMPLETED, changeMapper.countByBusinessStatus(BusinessStatusConstants.COMPLETED));
+        result.put(BusinessStatusConstants.REJECTED, changeMapper.countByBusinessStatus(BusinessStatusConstants.REJECTED));
+        return result;
     }
 
     /**
@@ -194,7 +155,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         if (BusinessStatusConstants.PENDING.equals(businessStatus)
                 || BusinessStatusConstants.REJECTED.equals(businessStatus)) {
             // 从 Redis 读取（带降级）
-            assets = getPendingAssetsFromRedis(id);
+            assets = getPendingAssets(id);
             log.debug("【资产变动-详情】审批中或已驳回，从 Redis 读取拟变更数据，变动单 ID：{}，状态：{}",
                     id, businessStatus);
         } else {
@@ -233,7 +194,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-新增】保存变动单成功，ID：{}", change.getId());
 
         saveAssetRelations(change.getId(), change.getAssets());
-        saveAttachmentsAsync(change.getId(), change.getAttachments());
+        saveAttachments(change.getId(), change.getAttachments());
 
         log.info("【资产变动-新增】完成，变动单ID：{}，编码：{}", change.getId(), change.getChangeCode());
         return result;
@@ -286,7 +247,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                 change.getAssets() != null ? change.getAssets().size() : 0);
 
         deleteAttachmentsByChangeId(change.getId());
-        saveAttachmentsAsync(change.getId(), change.getAttachments());
+        saveAttachments(change.getId(), change.getAttachments());
         log.info("【资产变动-修改】更新附件成功，数量：{}",
                 change.getAttachments() != null ? change.getAttachments().size() : 0);
 
@@ -344,7 +305,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-暂存】保存变动单成功，ID：{}", change.getId());
 
         saveAssetRelations(change.getId(), change.getAssets());
-        saveAttachmentsAsync(change.getId(), change.getAttachments());
+        saveAttachments(change.getId(), change.getAttachments());
 
         log.info("【资产变动-暂存】完成，变动单ID：{}，编码：{}", change.getId(), change.getChangeCode());
         return change.getId();
@@ -377,7 +338,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             changeMapper.insert(change);
             changeId = change.getId();
             saveAssetRelations(changeId, change.getAssets());
-            saveAttachmentsAsync(changeId, change.getAttachments());
+            saveAttachments(changeId, change.getAttachments());
             log.info("【资产变动-提交】步骤1完成，新建变动单成功，ID：{}，编码：{}", changeId, change.getChangeCode());
         } else {
             log.info("【资产变动-提交】步骤1：更新已有变动单，ID：{}", changeId);
@@ -405,6 +366,8 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                         if (TaskDefinitionConstants.SUBMIT.equals(currentTaskKey)) {
                             log.info("【资产变动-提交】检测到驳回后重新提交，节点：{}", currentTaskKey);
                             updateChangeBusinessData(existing, change, changeId);
+                            // 驳回后重新提交：持久化新的拟变更数据快照，避免沿用旧快照
+                            savePendingAssetsSnapshot(changeId, change.getAssets());
                             log.info("【资产变动-提交】业务数据更新完成");
 
                             CompleteTask completeDTO = new CompleteTask();
@@ -500,19 +463,10 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
                 changeId, procInstId, BusinessStatusConstants.PENDING);
         changeMapper.updateById(updateChange);
 
-        // 缓存拟变更资产数据到 Redis
-        if (!change.getAssets().isEmpty()) {
-            try {
-                String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
-                String json = JSONUtil.toJsonStr(change.getAssets());
-                stringRedisTemplate.opsForValue().set(redisKey, json,
-                        RedisConstants.ASSET_CHANGE_DRAFT_TTL, TimeUnit.DAYS);
-                log.info("【资产变动-提交】步骤5：保存拟变更资产数据到Redis，变动单ID：{}，资产数量：{}，缓存key：{}",
-                        changeId, change.getAssets().size(), redisKey);
-            } catch (Exception e) {
-                log.error("【资产变动-提交】保存拟变更资产数据到Redis失败，变动单ID：{}", changeId, e);
-            }
-        }
+        // 持久化拟变更资产数据快照（数据库为主存储，Redis为读加速）
+        savePendingAssetsSnapshot(changeId, change.getAssets());
+        log.info("【资产变动-提交】步骤5：持久化拟变更资产数据快照完成，变动单ID：{}，资产数量：{}",
+                changeId, change.getAssets() != null ? change.getAssets().size() : 0);
 
         log.info("【资产变动-提交】全部完成，变动单ID：{}，流程实例ID：{}", changeId, procInstId);
         return changeId;
@@ -650,8 +604,8 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     /**
      * 导出PDF
      * <p>
-     * 【优化点】使用 IO_EXECUTOR 线程池异步查询变动单数据，
-     * 提升接口响应速度。PDF生成本身是IO密集型操作，必须同步执行。
+     * 直接同步查询变动单数据并生成PDF。PDF生成本身是IO密集型，
+     * 且写入响应流必须同步执行，异步查询无实际收益。
      * </p>
      *
      * @param response HTTP响应对象，用于输出PDF流
@@ -660,19 +614,13 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
      */
     @Override
     public void exportPdf(HttpServletResponse response, Long id) throws Exception {
-        // 使用 IO_EXECUTOR 线程池异步查询变动单数据
-        CompletableFuture<ChangeVO> future = CompletableFuture.supplyAsync(
-                () -> selectChangeById(id),
-                IO_EXECUTOR
-        );
-
         try {
-            ChangeVO change = future.get(30, TimeUnit.SECONDS);
+            ChangeVO change = selectChangeById(id);
             if (change == null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "变动单不存在");
                 return;
             }
-            // 同步生成PDF（PDF生成本身是IO密集型，写入响应流必须同步）
+            // PDF生成本身是IO密集型，写入响应流必须同步执行
             changePdf.exportPdf(response, change);
         } catch (Exception e) {
             log.error("【资产变动-导出PDF】失败，变动单ID：{}", id, e);
@@ -683,7 +631,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     /**
      * 执行资产变更（在调用方事务内同步批量更新）
      * <p>
-     * 【修复说明】原实现使用 {@link CompletableFuture} 结合业务线程池并行更新，
+     * 【修复说明】原实现使用 CompletableFuture 结合业务线程池并行更新，
      * 导致数据库写操作脱离当前事务，且自调用使 {@code @Transactional} 失效，
      * 审批通过后资产变更失败无法回滚。现改为在当前事务内顺序批量更新，
      * 保证"审批 + 资产变更"的本地事务一致性。
@@ -706,7 +654,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         log.info("【资产变动-执行】开始执行资产变更，变动单ID：{}", changeId);
 
         // 1. 从 Redis 读取拟变更数据（带降级）
-        List<Assets> pendingAssets = getPendingAssetsFromRedis(changeId);
+        List<Assets> pendingAssets = getPendingAssets(changeId);
 
         if (pendingAssets == null || pendingAssets.isEmpty()) {
             log.warn("【资产变动-执行】没有资产需要变更");
@@ -750,50 +698,105 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
     }
 
     /**
-     * 从 Redis 读取拟变更数据（带降级）
+     * 读取拟变更资产数据（Redis 优先，异常或未命中降级到数据库快照）
      * <p>
-     * 【优化点】Redis 读取失败或数据不存在时，降级到数据库直查。
+     * 拟变更数据快照以数据库为主存储，Redis 仅作读加速：
+     * <ol>
+     *   <li>优先读 Redis 缓存</li>
+     *   <li>Redis 异常或未命中时，读数据库快照（change_data 字段）</li>
+     *   <li>两者都无（历史数据）时，兜底回退到当前资产数据</li>
+     * </ol>
      * </p>
      *
      * @param changeId 变动单ID
      * @return 拟变更资产列表
      */
-    private List<Assets> getPendingAssetsFromRedis(Long changeId) {
+    private List<Assets> getPendingAssets(Long changeId) {
         String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
 
+        // 1. 优先读 Redis 缓存
         try {
-            // 主链路：读 Redis
             String assetsJson = stringRedisTemplate.opsForValue().get(redisKey);
-
             if (StringUtils.isNotEmpty(assetsJson)) {
-                List<Assets> assets = JSONUtil.toList(JSONUtil.parseArray(assetsJson), Assets.class);
-                log.info("【资产变动-Redis】从 Redis 读取拟变更数据成功，变动单ID：{}，资产数量：{}",
-                        changeId, assets.size());
-                return assets;
+                return parseAssets(assetsJson, changeId);
             }
-
-            // Redis 中没有数据，降级到数据库
-            log.warn("【资产变动-Redis降级】Redis 中无数据，降级到数据库查询，变动单ID：{}", changeId);
-            return changeMapper.selectAssetsByChangeId(changeId);
-
         } catch (Exception e) {
-            // Redis 异常，降级到数据库
-            log.error("【资产变动-Redis降级】Redis 读取异常，降级到数据库查询，变动单ID：{}，异常：{}",
+            log.error("【资产变动-Redis降级】Redis 读取异常，降级到数据库快照，变动单ID：{}，异常：{}",
                     changeId, e.getMessage());
-            return changeMapper.selectAssetsByChangeId(changeId);
+        }
+
+        // 2. Redis 未命中，降级读数据库快照（可靠存储）
+        Change change = changeMapper.selectById(changeId);
+        if (change != null && StringUtils.isNotEmpty(change.getChangeData())) {
+            log.warn("【资产变动-Redis降级】Redis 未命中，从数据库快照读取拟变更数据，变动单ID：{}", changeId);
+            return parseAssets(change.getChangeData(), changeId);
+        }
+
+        // 3. 既无缓存也无快照（历史数据），兜底回退到当前资产数据
+        log.warn("【资产变动-兜底】未找到拟变更快照，回退到当前资产数据（可能非提交时快照），变动单ID：{}", changeId);
+        return changeMapper.selectAssetsByChangeId(changeId);
+    }
+
+    /**
+     * 解析拟变更资产 JSON
+     *
+     * @param json     拟变更资产 JSON 字符串
+     * @param changeId 变动单ID（用于日志）
+     * @return 拟变更资产列表
+     */
+    private List<Assets> parseAssets(String json, Long changeId) {
+        List<Assets> assets = JSONUtil.toList(JSONUtil.parseArray(json), Assets.class);
+        log.info("【资产变动】解析拟变更数据成功，变动单ID：{}，资产数量：{}", changeId, assets.size());
+        return assets;
+    }
+
+    /**
+     * 持久化拟变更资产数据快照（数据库为主存储，Redis 为读加速）
+     * <p>
+     * 提交/重新提交时将拟变更数据快照落库，保证快照持久可靠；
+     * Redis 仅作读缓存，写入失败不影响主流程（读取时降级到库）。
+     * </p>
+     *
+     * @param changeId 变动单ID
+     * @param assets   拟变更资产列表
+     */
+    private void savePendingAssetsSnapshot(Long changeId, List<Assets> assets) {
+        if (assets == null || assets.isEmpty()) {
+            log.debug("【资产变动-快照】没有资产需要持久化，变动单ID：{}", changeId);
+            return;
+        }
+
+        String json = JSONUtil.toJsonStr(assets);
+
+        // 1. 落库：数据库作为快照的可靠存储
+        Change snapshot = new Change();
+        snapshot.setId(changeId);
+        snapshot.setChangeData(json);
+        changeMapper.updateById(snapshot);
+        log.info("【资产变动-快照】拟变更数据已持久化到数据库，变动单ID：{}，资产数量：{}", changeId, assets.size());
+
+        // 2. 写缓存：Redis 失败不影响主流程，读取时降级到库
+        try {
+            String redisKey = RedisConstants.ASSET_CHANGE_DRAFT_PREFIX + changeId;
+            stringRedisTemplate.opsForValue().set(redisKey, json,
+                    RedisConstants.ASSET_CHANGE_DRAFT_TTL, TimeUnit.DAYS);
+            log.info("【资产变动-快照】拟变更数据已缓存到Redis，变动单ID：{}，缓存key：{}", changeId, redisKey);
+        } catch (Exception e) {
+            log.error("【资产变动-快照】缓存到Redis失败（读取时降级到库），变动单ID：{}", changeId, e);
         }
     }
 
     /**
-     * 异步并行保存附件（IO密集型）
+     * 保存附件（在当前事务内同步保存）
      * <p>
-     * 【优化点】使用 IO_EXECUTOR 线程池并行保存每个附件。
+     * 原实现使用 IO_EXECUTOR 线程池异步并行保存，导致附件写操作脱离当前事务，
+     * 主事务回滚时附件已提交，破坏数据一致性。现改为同步保存，与主流程同事务。
      * </p>
      *
      * @param changeId    变动单ID
      * @param attachments 附件列表
      */
-    private void saveAttachmentsAsync(Long changeId, List<ChangeAttachment> attachments) {
+    private void saveAttachments(Long changeId, List<ChangeAttachment> attachments) {
         if (attachments == null || attachments.isEmpty()) {
             log.debug("【资产变动-附件】没有附件需要保存，变动单ID：{}", changeId);
             return;
@@ -806,20 +809,11 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
             attachment.setUploadTime(DateUtils.getNowDate());
         });
 
-        // 使用 IO_EXECUTOR 线程池并行保存附件
-        List<CompletableFuture<Boolean>> futures = attachments.stream()
-                .map(attachment -> CompletableFuture.supplyAsync(
-                        () -> changeAttachmentService.save(attachment),
-                        IO_EXECUTOR
-                ))
-                .collect(Collectors.toList());
-
-        // 等待所有保存完成
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        long successCount = futures.stream().filter(CompletableFuture::join).count();
-        log.info("【资产变动-附件】并行保存完成，变动单ID：{}，成功：{}，总数：{}",
-                changeId, successCount, attachments.size());
+        // 在当前事务内同步保存，保证与主流程的原子性
+        for (ChangeAttachment attachment : attachments) {
+            changeAttachmentService.save(attachment);
+        }
+        log.info("【资产变动-附件】保存完成，变动单ID：{}，数量：{}", changeId, attachments.size());
     }
 
     /**
@@ -862,7 +856,7 @@ public class ChangeServiceImpl extends ServiceImpl<ChangeMapper, Change> impleme
         saveAssetRelations(changeId, change.getAssets());
 
         deleteAttachmentsByChangeId(changeId);
-        saveAttachmentsAsync(changeId, change.getAttachments());
+        saveAttachments(changeId, change.getAttachments());
 
         log.info("【资产变动-业务数据更新】完成");
     }

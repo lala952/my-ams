@@ -75,4 +75,10 @@ public class Change extends BaseEntity {
      * 删除标志（0代表存在 2代表删除）
      */
     private String delFlag;
+
+    /**
+     * 拟变更资产数据快照（JSON，序列化的资产列表）
+     * 数据库为主存储，Redis 仅作读缓存；审批通过后据此批量更新资产
+     */
+    private String changeData;
 }
